@@ -86,6 +86,7 @@ vendor/             three.module.js, GLTFLoader.js, BufferGeometryUtils.js
 models/             samoloty gracza i wrogów, wyspy (GLB, low-poly)
 models/bosses/     modele bossów boss1..4_*_lite.glb (ok. 3 tys. trójkątów, tekstury 1024 px, ok. 450 KB każdy)
 img/                sprity wyboru samolotu
+sounds/             dźwięki z plików: wybuchy bossów, wybuch i pętla śmigłowca (reszta efektów jest syntezowana w kodzie)
 docs/               grafiki do README (baner, zrzuty ekranu)
 ```
 

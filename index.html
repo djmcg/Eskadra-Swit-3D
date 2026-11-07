@@ -662,7 +662,48 @@ function nowaSmuga(y) {
 // ============================================================
 // AUDIO (WebAudio; syntezowane)
 // ============================================================
-const audio = { ctx: null };
+const audio = { ctx: null, buf: {}, ladowanie: {} };
+// dźwięki z plików (sounds/): ładowane po pierwszym geście użytkownika; gdy pliku brak, gra używa dźwięków syntezowanych
+const PLIKI_DZW = {
+  bossWybuch: 'sounds/5._Final_Stage_Bos explosion .mp3',   // zniszczenie bossa w rundach 1-3
+  bossFinal: 'sounds/medium fighter explosion.mp3',         // zniszczenie ostatniego bossa (Cytadela)
+  smigloWybuch: 'sounds/1._Small_Fighter_eexplosion .mp3',  // zestrzelony śmigłowiec
+  smiglo: 'sounds/Helicopter_loop_#1-1794060297041.wav',    // pętla śmigłowca
+};
+function zaladujDzwieki() {
+  for (const k in PLIKI_DZW) {
+    if (audio.buf[k] || audio.ladowanie[k]) continue;
+    audio.ladowanie[k] = true;
+    const url = PLIKI_DZW[k].split('/').map(encodeURIComponent).join('/'); // # i spacje w nazwach plików
+    fetch(url).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then((ab) => new Promise((ok, err) => audio.ctx.decodeAudioData(ab, ok, err)))
+      .then((b) => { audio.buf[k] = b; })
+      .catch((e) => { audio.ladowanie[k] = false; console.warn('Nie wczytano dźwięku ' + k, e); });
+  }
+}
+function graj(nazwa, vol, zapas) { // jednorazowo; bez wczytanego pliku wywołuje zapasowy dźwięk syntezowany
+  const b = audio.buf[nazwa], c = audio.ctx;
+  if (!b || !c) { if (zapas) zapas(); return; }
+  const s = c.createBufferSource(), g = c.createGain(); s.buffer = b; g.gain.value = vol; s.connect(g); g.connect(audio.sfx); s.start();
+}
+// głośność pętli śmigłowca zależy od odległości od środka ekranu (po okręgach): blisko środka 100%, dalej 50%, przy wlocie na ekran 10%
+const GLOSNOSC_PKT = [[0.1, 1], [0.45, 0.5], [0.9, 0.1]]; // [odległość od środka (0 = środek, 1 = róg ekranu), głośność]
+function glosnoscOdSrodka(x, y) {
+  const r = Math.hypot(x - W / 2, y - H / 2) / (Math.hypot(W, H) / 2), P = GLOSNOSC_PKT;
+  if (r <= P[0][0]) return P[0][1];
+  for (let i = 1; i < P.length; i++) if (r <= P[i][0]) { const k = (r - P[i - 1][0]) / (P[i][0] - P[i - 1][0]); return P[i - 1][1] + (P[i][1] - P[i - 1][1]) * k; }
+  return P[P.length - 1][1];
+}
+function smigloAktualizuj(w) { // pętla śmigłowca: start przy pojawieniu się, głośność wg położenia
+  const c = audio.ctx; if (!c || !audio.buf.smiglo) return;
+  if (!w.dzwiek) {
+    const s = c.createBufferSource(), g = c.createGain(); s.buffer = audio.buf.smiglo; s.loop = true; g.gain.value = 0; s.connect(g); g.connect(audio.sfx);
+    s.start(0, Math.random() * s.buffer.duration); w.dzwiek = { s, g };
+  }
+  w.dzwiek.g.gain.setTargetAtTime(glosnoscOdSrodka(w.x, w.y), c.currentTime, 0.08);
+}
+function smigloStop(w) { if (!w.dzwiek) return; try { w.dzwiek.s.stop(); } catch (e) {} w.dzwiek.g.disconnect(); w.dzwiek = null; }
+function smiglaCisza() { if (!audio.ctx) return; for (const w of wrogowie) if (w.dzwiek) w.dzwiek.g.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.03); }
 function audioInit() {
   if (audio.ctx) { if (audio.ctx.state === 'suspended') audio.ctx.resume(); return; }
   const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
@@ -675,7 +716,7 @@ function audioInit() {
   audio.szum = buf;
   const puls = (duty) => { const N = 48, re = new Float32Array(N), im = new Float32Array(N); for (let n = 1; n < N; n++) re[n] = 2 / (n * Math.PI) * Math.sin(n * Math.PI * duty); return c.createPeriodicWave(re, im); };
   audio.fala25 = puls(0.25); audio.fala12 = puls(0.125); audio.fala50 = puls(0.5);
-  ustawGlosnosc(); muzykaStart();
+  ustawGlosnosc(); muzykaStart(); zaladujDzwieki();
 }
 function ustawGlosnosc() {
   if (!audio.ctx) return;
@@ -731,6 +772,8 @@ const dzw = {
   runda() { [523, 659, 784, 1047].forEach((f, i) => ton(f, f, 0.2, 'square', 0.11, teraz(i * 0.12))); },
   koniec() { [440, 370, 311, 220].forEach((f, i) => ton(f, f * 0.97, 0.3, 'sawtooth', 0.14, teraz(i * 0.2))); },
   klik() { ton(700, 950, 0.05, 'square', 0.08); },
+  bossWybuch(wv) { graj(wv === 3 ? 'bossFinal' : 'bossWybuch', 1, () => dzw.bomba()); },
+  smigloWybuch() { graj('smigloWybuch', 1, () => dzw.wybuch(true)); },
   poziom() { [659, 880].forEach((f, i) => ton(f, f, 0.12, 'square', 0.09, teraz(i * 0.09))); },
   alarm() { ton(220, 150, 0.22, 'sawtooth', 0.14); },
   laserLadowanie(dur) { ton(180, 1500, dur, 'sawtooth', 0.09); ton(90, 750, dur, 'square', 0.05); szum(dur, 0.06, 1500, 6000, 'bandpass'); }, // narastający pisk przed laserem
@@ -909,7 +952,7 @@ function wybierz(i) {
 }
 
 function wyczyscSwiat() {
-  for (const w of wrogowie) usun(w.obj);
+  for (const w of wrogowie) { smigloStop(w); usun(w.obj); }
   for (const b of bonusy) { scene.remove(b.spr); scene.remove(b.glow); }
   pociski = []; wrogowie = []; wrogiePociski = []; wybuchy = []; bonusy = [];
   blysk = 0; zamroz = 0; el('boss').hidden = true; el('boss-opis').hidden = true; bossSig = '';
@@ -948,6 +991,7 @@ function doMenu() {
 }
 function pauza() {
   if (stan !== 'gra') return;
+  smiglaCisza();
   stan = 'pauza'; document.body.classList.remove('gra'); pokazEkran('pauza'); muzEtykiety(); el('btn-wznow').focus({ preventScroll: true });
 }
 function wznow() {
@@ -956,6 +1000,7 @@ function wznow() {
   for (const k in klawisze) klawisze[k] = false;
 }
 function koniec(wygrana) {
+  for (const w of wrogowie) smigloStop(w);
   stan = 'koniec'; document.body.classList.remove('gra'); el('narzedzia').hidden = true; el('hud-bronie').hidden = true; el('hp-box').hidden = true; el('boss').hidden = true; el('boss-opis').hidden = true; dzw.koniec();
   const premiaZ = wygrana ? Math.round(zycia * 500 * TR.punkty) : 0; punkty += premiaZ;
   const nowy = !testowy && punkty > rekord;
@@ -1587,12 +1632,12 @@ function trafWroga(w, dmg, cichy) {
   if (w.hp > 0) return;
   w.zniszczony = true; dodajPkt(w.pkt); zabite++; lvl.zabitePoz++;
   wybuch(w.x, w.y, (w.duzy ? 1.8 : 1) * S);
-  if (!cichy || Math.random() < 0.35) dzw.wybuch(!!w.duzy);
+  if (w.typ === 'smiglowiec') dzw.smigloWybuch(); else if (!cichy || Math.random() < 0.35) dzw.wybuch(!!w.duzy);
   if (w.boss) { bossPokonany(w); return; }
   if (mozeDropic(w)) { nowyBonus(w.x, w.y); lvl.bonusyPoz++; bonusCd = TR.bonusCd; }
 }
 function bossPokonany(w) {
-  lvl.zostalo = 0; wrogiePociski = []; blysk = 1; dzw.bomba();
+  lvl.zostalo = 0; wrogiePociski = []; blysk = 1; dzw.bossWybuch(w.wariant);
   for (const o of wrogowie) if (o !== w && !o.zniszczony) { o.zniszczony = true; wybuch(o.x, o.y, (o.duzy ? 1.8 : 1) * S); }
   for (const dx of [-60, 60]) wybuch(w.x + dx * S, w.y + 20 * S, 2.4 * S);
   lvl.boom = { x: w.x, y: w.y, hw: w.hw, hh: w.hh, t: 1.8, n: 0 }; el('boss-opis').hidden = true;
@@ -1660,6 +1705,7 @@ function krok(dt) {
   }
   for (const w of wrogowie) {
     if (!(zam && !w.boss)) ruchWroga(w, dt);
+    if (w.typ === 'smiglowiec' && !w.zniszczony) smigloAktualizuj(w);
     for (const p of pociski) {
       if (p.zuzyty || w.zniszczony) continue;
       if (w.boss) { if (trafBossaPocisk(w, p)) p.zuzyty = true; }
@@ -1673,7 +1719,7 @@ function krok(dt) {
     }
   }
   for (const w of wrogowie) if (!w.zniszczony && (w.y - w.r > H + 60 * S || w.x < -140 * S || w.x > W + 140 * S || w.y < -400 * S)) { w.zniszczony = true; if (!w.naziemny && !w.boss && w.y > H * 0.5) przeciek(); }
-  for (const w of wrogowie) if (w.zniszczony) usun(w.obj);
+  for (const w of wrogowie) if (w.zniszczony) { smigloStop(w); usun(w.obj); }
   wrogowie = wrogowie.filter((w) => !w.zniszczony);
   if (stan !== 'gra') return;
   if (lvl.boom) { const b = lvl.boom; b.t -= dt; b.n -= dt; if (b.n <= 0) { b.n = 0.11; wybuch(b.x + losuj(-b.hw, b.hw), b.y + losuj(-b.hh, b.hh), 1.3 * S); if (Math.random() < 0.5) dzw.wybuch(false); } if (b.t <= 0) lvl.boom = null; }
@@ -1848,6 +1894,7 @@ zbudujWybor(); zbudujTrudnosc(); zbudujBossy(); zbudujTesty(); muzEtykiety(); ro
 requestAnimationFrame(petla);
 window.__eskadraOK = true;
 window.__eskadra = {
+  get audio() { return audio; }, glosnoscOdSrodka, get W() { return W; }, get H() { return H; },
   get wrogiePociski() { return wrogiePociski; }, get wyspy() { return wyspy; }, get SCEN() { return SCEN; }, get K0() { return K0; }, trafGracza,
   start, pauza, dodajWroga, ustawTrudnosc, obrazenia, get TR() { return TR; }, get S() { return S; }, get stan() { return stan; }, get wrogowie() { return wrogowie; }, get gracz() { return gracz; }, get lvl() { return lvl; },
   get info() { return { runda, poziom, trud, zycia, hp: gracz.hp, punkty, zabite, bonusy: bonusy.length, wrogiePociski: wrogiePociski.length }; },
