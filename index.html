@@ -52,7 +52,9 @@
   .panel .etyk { font-size: 14px; color: var(--tekst-cichy); }
   .panel .wart { font-family: var(--font-tytul); font-size: 30px; font-variant-numeric: tabular-nums; line-height: 1.05; }
   .panel .prawo { text-align: right; align-items: flex-end; }
-  .zycia { font-size: 24px; letter-spacing: 0.15em; color: var(--akcent); }
+  .zycia { display: flex; gap: 3px; align-items: center; justify-content: flex-end; min-height: 30px; color: var(--akcent); }
+  .zycia img { width: 30px; height: 30px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
+  .zycia b { font-family: var(--font-tytul); font-weight: 400; font-size: 22px; letter-spacing: .04em; }
   .przecieki { font-size: 13px; letter-spacing: 0.12em; color: var(--tekst-cichy); }
   .przecieki.grozi { color: #ff7a6b; }
   .boss { position: absolute; left: 50%; transform: translateX(-50%); top: 134px; width: min(60%, 360px); text-align: center; pointer-events: none; font-family: var(--font-tytul); font-size: 14px; letter-spacing: .08em; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
@@ -922,7 +924,11 @@ function ustawTrudnosc(id) {
   el('opis-trud').textContent = TR.opis; wczytajRekord();
 }
 function zmienTrudnosc(d) { ustawTrudnosc(TRUDNOSCI_ID[(TRUDNOSCI_ID.indexOf(ust.trudnosc) + d + 3) % 3]); }
-function pokazZycia() { eZycia.textContent = zycia <= 6 ? '▲'.repeat(Math.max(0, zycia)) : '▲ ×' + zycia; }
+function pokazZycia() { // życia jako miniatury wybranego samolotu (powyżej 6: jedna ikona i liczba)
+  const n = Math.max(0, zycia), src = 'img/sprite_' + profil.klucz + '.png', ile = n <= 6 ? n : 1;
+  eZycia.innerHTML = ('<img alt="" src="' + src + '">').repeat(ile) + (n > 6 ? '<b>× ' + n + '</b>' : '');
+  eZycia.setAttribute('aria-label', 'Życia: ' + n);
+}
 function odtworz(elem, cls) { elem.classList.remove(cls); void elem.offsetWidth; elem.classList.add(cls); }
 function baner(txt, pod) { const b = el('baner'); b.innerHTML = '<span></span>' + (pod ? '<small></small>' : ''); b.firstChild.textContent = txt; if (pod) b.lastChild.textContent = pod; odtworz(b, 'pokaz'); }
 function komunikat(txt) { const k = el('komunikat'); k.textContent = txt; odtworz(k, 'pokaz'); }
@@ -1896,6 +1902,7 @@ window.__eskadraOK = true;
 window.__eskadra = {
   get audio() { return audio; }, glosnoscOdSrodka, get W() { return W; }, get H() { return H; },
   get wrogiePociski() { return wrogiePociski; }, get wyspy() { return wyspy; }, get SCEN() { return SCEN; }, get K0() { return K0; }, trafGracza,
+  setZycia(n) { zycia = n; pokazZycia(); },
   start, pauza, dodajWroga, ustawTrudnosc, obrazenia, get TR() { return TR; }, get S() { return S; }, get stan() { return stan; }, get wrogowie() { return wrogowie; }, get gracz() { return gracz; }, get lvl() { return lvl; },
   get info() { return { runda, poziom, trud, zycia, hp: gracz.hp, punkty, zabite, bonusy: bonusy.length, wrogiePociski: wrogiePociski.length }; },
   traf(w, d) { trafWroga(w, d); },
