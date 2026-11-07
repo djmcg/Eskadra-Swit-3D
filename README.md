@@ -1,23 +1,34 @@
+<div align="center">
+  <img src="docs/baner.jpg" alt="Eskadra Świt 3D — 4 rundy: morze, pustynia, zima, twierdza na lawie" width="100%">
+</div>
+
 # Eskadra Świt 3D
 
-Pionowa strzelanka 3D w przeglądarce (Three.js / WebGL), pełny ekran, sterowanie myszą, dotykiem lub klawiaturą.
-Bronisz wybrzeża w **4 rundach po 10 poziomów**. Każda runda ma inną mapę, innych wrogów i kończy się walką z bossem
-o własnej mechanice. Po pokonaniu czwartego bossa kończy się gra („Gratulacje!”).
+**Pionowa strzelanka 3D w przeglądarce (Three.js / WebGL).** Bronisz wybrzeża w **4 rundach po 10 poziomów**.
+Każda runda ma inną mapę (morze, pustynia, zima, twierdza na lawie), innych wrogów i kończy się walką z bossem
+o własnej mechanice. Pokonaj czwartego bossa, a gra kończy się ekranem „Gratulacje!”.
+Sterowanie myszą, dotykiem lub klawiaturą, ogień automatyczny, pełny ekran, muzyka i efekty syntezowane w WebAudio.
+
+| Menu | Runda 1 · Morze | Runda 2 · Pustynia | Runda 3 · Zima | Runda 4 · Twierdza |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="docs/menu.jpg" width="170"> | <img src="docs/runda1.jpg" width="170"> | <img src="docs/runda2.jpg" width="170"> | <img src="docs/runda3.jpg" width="170"> | <img src="docs/runda4.jpg" width="170"> |
 
 ## Rozgrywka
 
-- **Rundy:** 1 Morze → 2 Pustynia → 3 Zima → 4 Twierdza na lawie. Każda z własnym podłożem, niebem, światłem, scenerią i opadami.
-- **Poziomy:** 10 w rundzie (9 zwykłych + walka z bossem). Poziom ma skończoną liczbę wrogów; trudność rośnie z poziomem i rundą.
+- **Rundy:** Morze → Pustynia → Zima → Twierdza na lawie. Każda ma własne podłoże, niebo, światło, scenerię i opady (śnieg, popiół).
+- **Poziomy:** 10 w rundzie: 9 zwykłych i walka z bossem. Poziom ma skończoną liczbę wrogów, a trudność rośnie z poziomem i rundą.
 - **Wrogowie:** myśliwiec, zygzak, bombowiec oraz w każdej rundzie jeden nowy: kamikadze (R1), śmigłowiec bojowy (R2),
   lodowy snajper ze spowalniającym pociskiem (R3). Runda 4 to wyłącznie wieże naziemne (działko, salwa, rakieta naprowadzana, bunkier).
 - **Pasek życia:** gracz ma pasek wytrzymałości i kilka żyć. Trafienie zabiera część paska, po jego wyczerpaniu tracisz życie.
   Pasek odnawia bonus „naprawa”, koniec poziomu (+15) i zmiana rundy.
 - **Przecieki:** wróg, który przeleci dolną krawędzią, zapełnia licznik przecieków; pełny licznik zabiera część paska (nie dotyczy rundy 4).
-- **Bonusy:** broń (4 poziomy), tarcza, naprawa, bomba, zegar, szybki ogień. Są rzadkie (odstęp i limit na poziom zależą od trudności),
-  1UP daje tylko pokonany boss.
-- **Punkty i rekordy:** osobny rekord dla każdego poziomu trudności.
+- **Bonusy:** broń (4 poziomy), tarcza, naprawa, bomba, zegar, szybki ogień. Są rzadkie, 1UP daje tylko pokonany boss.
+- **Punkty i rekordy:** osobny rekord dla każdego poziomu trudności, zapisywany w przeglądarce.
 
-### Bossowie
+## Bossowie
+
+W walce z bossem na ekranie jest **tylko boss** (bez innych przeciwników). Gracz i boss mają paski życia.
+Boss nie zabija jednym trafieniem, a o połowie walki wypada bonus „naprawa”.
 
 | Runda | Boss | Mechanika | Jak pokonać |
 |---|---|---|---|
@@ -26,11 +37,15 @@ o własnej mechanice. Po pokonaniu czwartego bossa kończy się gra („Gratulac
 | 3 | **Lodowy Lewiatan** | Pancerz na zmianę zamyka się (nietykalny) i otwiera (cyjan). Zamknięty strzela lodem i pierścieniem pocisków. | Unikaj pocisków, strzelaj tylko przy otwartym pancerzu. |
 | 4 | **Cytadela** | Cztery generatory osłaniają rdzeń (im mniej ich, tym większe obrażenia); po zniszczeniu wszystkich odpala obrotowy laser. | Niszcz narożne kopuły, potem rdzeń; uciekaj z toru czerwonej linii. |
 
+| Admirał | Gunship Alfa | Lodowy Lewiatan | Cytadela |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/boss1.jpg" width="200"> | <img src="docs/boss2.jpg" width="200"> | <img src="docs/boss3.jpg" width="200"> | <img src="docs/boss4.jpg" width="200"> |
+
 Opisy są też w grze: krótki na początku walki, pełny w menu pod przyciskiem **Bossowie**.
 
-### Poziomy trudności
+## Poziomy trudności
 
-Wybór w menu (klik albo strzałki ↑/↓). Zmieniają m.in. liczbę żyć, obrażenia, HP i szybkostrzelność wrogów, prędkość pocisków,
+Wybór w menu (klik albo strzałki ↑/↓). Zmieniają liczbę żyć, obrażenia, HP i szybkostrzelność wrogów, prędkość pocisków,
 liczebność fal, częstość bonusów, długość okien na bossach, moment szału bossa i mnożnik punktów.
 
 | | Łatwy | Średni | Trudny |
@@ -64,20 +79,16 @@ Three.js (r160), `GLTFLoader` i `BufferGeometryUtils` są w katalogu `vendor/`. 
 ## Struktura
 
 ```
-index.html          cała gra: logika, render, audio (syntezowane w WebAudio), UI
+index.html          cała gra: logika, render, audio (WebAudio), UI
 vendor/             three.module.js, GLTFLoader.js, BufferGeometryUtils.js
 models/             samoloty gracza i wrogów, wyspy (GLB, low-poly)
-models/bosses/      lekkie modele bossów boss1..4_*_lite.glb (płaskie cieniowanie, 4 jednolite materiały)
+models/bosses/     modele bossów boss1..4_*_lite.glb (ok. 3 tys. trójkątów, tekstury 1024 px, ok. 450 KB każdy)
 img/                sprity wyboru samolotu
+docs/               grafiki do README (baner, zrzuty ekranu)
 ```
 
 Mapy, nowi wrogowie (śmigłowiec, wieże) i efekty są budowane proceduralnie z brył Three.js. Podłoże każdej rundy to tekstura
-generowana w kodzie (kolor + normalne, w rundzie 4 także emisja lawy).
-
-### Modele bossów
-
-W `models/bosses/` leżą lekkie wersje (ok. 1,5–2,7 tys. trójkątów, 25–40 KB). Ciężkie oryginały (`Runda … .glb`, kilkanaście MB)
-są w `.gitignore`. Cytadela ma osobny węzeł `Glowa`, który gra obraca w stronę gracza.
+generowana w kodzie (kolor + normalne, w rundzie 4 także emisja lawy). Ciężkie oryginały modeli bossów (`Runda … .glb`) są w `.gitignore`.
 
 ## Testy
 

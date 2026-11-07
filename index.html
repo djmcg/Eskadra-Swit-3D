@@ -1077,7 +1077,7 @@ function pokazPrzecieki() {
 function planPoziomu() {
   const boss = poziom === POZ_N, wieze = runda === RUNDY_N;
   let ile, odstep;
-  if (boss) { ile = 6 + 2 * runda; odstep = wieze ? 2.2 : 2.6; } // eskorta bossa
+  if (boss) return { ile: 0, odstep: 99, boss }; // walka z bossem: tylko boss, bez innych przeciwników
   else if (wieze) { ile = 8 + 2 * poziom; odstep = Math.max(0.7, 1.4 - 0.06 * poziom); }
   else { ile = 12 + 2 * poziom + 6 * (runda - 1); odstep = Math.max(0.35, (1.3 - 0.045 * poziom) / (1 + 0.12 * (runda - 1))); }
   return { ile: Math.max(boss ? 3 : 6, Math.round(ile * TR.ilosc)), odstep, boss };
@@ -1555,6 +1555,7 @@ function mozeDropic(w) { // bonusy rzadkie: odstęp 12 s, maks. 3 na poziom, gwa
 }
 function trafWroga(w, dmg, cichy) {
   w.hp -= dmg; w.trafiony = 0.08;
+  if (w.boss && !w.polowa && w.hp > 0 && w.hp < w.maxHp * 0.5) { w.polowa = true; nowyBonus(w.x, w.y + w.hh + 20 * S, 'naprawa'); komunikat('BOSS OSŁABIONY — NAPRAWA!'); }
   if (!cichy) dzw.traf();
   if (w.hp > 0) return;
   w.zniszczony = true; dodajPkt(w.pkt); zabite++; lvl.zabitePoz++;
@@ -1735,7 +1736,7 @@ function render3D(dt) {
     w.model.rotation.z = roll;
     if (w.typ === 'kamikadze') w.obj.rotation.y = w.kat;
     if (w.wirnik) w.wirnik.rotation.y = czas * 25;
-    if (w.trafiony > 0) swiecenie(w.obj, 0xffffff, w.boss ? 0.3 : 0.9);
+    if (w.trafiony > 0) swiecenie(w.obj, 0xffffff, w.boss ? 0.1 : 0.9);
     else if (w.przyg > 0 && Math.floor(czas * 14) % 2) swiecenie(w.obj, w.przygKol, 0.9);
     else if (w.boss && w.dock && w.wariant === 2) swiecenie(w.obj, w.faza === 'otwarty' ? 0x33ddff : 0x1a3a66, w.faza === 'otwarty' ? 0.5 + 0.4 * Math.sin(czas * 8) : 0.35);
     else if (w.boss && w.faza === 'powrot') swiecenie(w.obj, 0xff3a0a, 0.28 + 0.15 * Math.sin(czas * 10));
