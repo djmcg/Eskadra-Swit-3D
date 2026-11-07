@@ -19,9 +19,10 @@ Sterowanie myszą, dotykiem lub klawiaturą, ogień automatyczny, pełny ekran, 
 - **Poziomy:** 10 w rundzie: 9 zwykłych i walka z bossem. Poziom ma skończoną liczbę wrogów, a trudność rośnie z poziomem i rundą.
 - **Wrogowie:** myśliwiec, zygzak, bombowiec oraz w każdej rundzie jeden nowy: kamikadze (R1), śmigłowiec bojowy (R2),
   lodowy snajper ze spowalniającym pociskiem (R3). Runda 4 to wyłącznie wieże naziemne (działko, salwa, rakieta naprowadzana, bunkier).
-- **Pasek życia:** gracz ma pasek wytrzymałości i kilka żyć. Trafienie zabiera część paska, po jego wyczerpaniu tracisz życie.
-  Pasek odnawia bonus „naprawa”, koniec poziomu (+15) i zmiana rundy.
-- **Przecieki:** wróg, który przeleci dolną krawędzią, zapełnia licznik przecieków; pełny licznik zabiera część paska (nie dotyczy rundy 4).
+- **Pasek życia:** pasek wytrzymałości jest na środku dołu ekranu. Na średnim poziomie trzy trafienia kończą jedno życie (łatwy: 4, trudny: 2),
+  hitbox obejmuje kadłub razem ze skrzydłami. Pasek odnawia bonus „naprawa”, koniec poziomu (+15) i zmiana rundy.
+- **Przełamanie obrony:** wróg, który przeleci dolną krawędzią, zapełnia licznik przecieków (5 na średnim, poziom ma własny licznik).
+  Pełny licznik to „LINIA OBRONY PRZEŁAMANA”: −50 wytrzymałości, nawet przy włączonej tarczy (nie dotyczy rundy 4, gdzie wrogami są wieże).
 - **Bonusy:** broń (4 poziomy), tarcza, naprawa, bomba, zegar, szybki ogień. Są rzadkie, 1UP daje tylko pokonany boss.
 - **Punkty i rekordy:** osobny rekord dla każdego poziomu trudności, zapisywany w przeglądarce.
 
@@ -51,7 +52,8 @@ liczebność fal, częstość bonusów, długość okien na bossach, moment sza�
 | | Łatwy | Średni | Trudny |
 |---|---|---|---|
 | Życia na starcie | 5 | 3 | 2 |
-| Obrażenia gracza | ×0,6 | ×1 | ×1,4 |
+| Trafień do utraty życia | 4 | 3 | 2 |
+| Obrażenia gracza | ×0,75 | ×1 | ×1,5 |
 | HP wrogów / bossów | ×0,8 / ×0,75 | ×1 | ×1,3 / ×1,3 |
 | Punkty | ×0,75 | ×1 | ×1,5 |
 

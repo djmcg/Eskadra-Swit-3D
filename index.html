@@ -59,10 +59,11 @@
   .boss .pasek-boss { height: 10px; margin-top: 3px; background: rgba(255,255,255,.2); border-radius: 5px; overflow: hidden; border: 1px solid rgba(0,0,0,.4); }
   .boss .pasek-boss i { display: block; height: 100%; background: #e0483c; }
   @media (min-width: 761px) { .boss { top: 92px; } }
-  .hp { display: block; width: 150px; height: 10px; margin-top: 3px; background: rgba(255,255,255,.18); border-radius: 5px; overflow: hidden; border: 1px solid rgba(0,0,0,.45); }
+  .hp-box { position: absolute; left: 50%; transform: translateX(-50%); bottom: 10px; width: min(58%, 320px); pointer-events: none; text-align: center; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--tekst-cichy); text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+  .hp { display: block; width: 100%; height: 14px; margin-top: 2px; background: rgba(255,255,255,.18); border-radius: 5px; overflow: hidden; border: 1px solid rgba(0,0,0,.45); }
   .hp i { display: block; height: 100%; width: 100%; background: #3ecf6b; transition: width .12s, background .2s; }
   .boss small { display: block; margin-top: 3px; font-family: var(--font-tekst); font-size: 14px; letter-spacing: .03em; font-weight: 700; color: var(--tekst); }
-  .boss-opis { position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px; width: min(92%, 520px); box-sizing: border-box; padding: 8px 14px; border-radius: 12px; background: rgba(9,30,48,.86); border: 1px solid rgba(242,177,52,.45); pointer-events: none; text-align: center; opacity: 0; }
+  .boss-opis { position: absolute; left: 50%; transform: translateX(-50%); bottom: 46px; width: min(92%, 520px); box-sizing: border-box; padding: 8px 14px; border-radius: 12px; background: rgba(9,30,48,.86); border: 1px solid rgba(242,177,52,.45); pointer-events: none; text-align: center; opacity: 0; }
   .boss-opis b { display: block; font-family: var(--font-tytul); font-weight: 400; font-size: 17px; letter-spacing: .06em; color: var(--akcent); }
   .boss-opis span { display: block; font-size: 15px; line-height: 1.25; color: var(--tekst); }
   .boss-opis.pokaz { animation: bossopis 9s ease both; }
@@ -165,7 +166,7 @@
   <div class="legenda" aria-label="Skróty klawiszowe"><span><kbd>M</kbd>muzyka wł./wył.</span><span><kbd>Esc</kbd>/<kbd>P</kbd>pauza</span><span><kbd>F</kbd>pełny ekran</span><span><kbd>WASD</kbd>/<kbd>←↑↓→</kbd>/mysz ruch</span></div>
   <div class="panel">
     <div class="blok"><span class="etyk">Punkty</span><span class="wart" id="punkty">0</span></div>
-    <div class="blok prawo"><span class="etyk">Runda <span id="fala">1</span> · Poz. <span id="poziom">1</span>/10 · Rekord <span id="rekord">0</span></span><span class="zycia" id="zycia" aria-label="Życia">▲▲▲</span><span class="hp" id="hp" role="progressbar" aria-label="Wytrzymałość" aria-valuemin="0" aria-valuemax="100"><i id="hp-pasek"></i></span><span class="przecieki" id="przecieki" aria-label="Przecieki"></span></div>
+    <div class="blok prawo"><span class="etyk">Runda <span id="fala">1</span> · Poz. <span id="poziom">1</span>/10 · Rekord <span id="rekord">0</span></span><span class="zycia" id="zycia" aria-label="Życia">▲▲▲</span><span class="przecieki" id="przecieki" aria-label="Przecieki"></span></div>
   </div>
   <div class="hud-bronie" id="hud-bronie" hidden>
     <div class="hud-bron"><span id="hud-bron-nazwa">BLASTER</span><span id="hud-pips"></span></div>
@@ -180,6 +181,7 @@
   </div>
   <div class="boss" id="boss" hidden><span id="boss-nazwa">BOSS</span><div class="pasek-boss"><i id="boss-pasek" style="width:100%"></i></div><small id="boss-info"></small></div>
   <div class="boss-opis" id="boss-opis" hidden><b id="boss-opis-nazwa"></b><span id="boss-opis-1"></span><span id="boss-opis-2"></span></div>
+  <div class="hp-box" id="hp-box" hidden>Wytrzymałość<span class="hp" id="hp" role="progressbar" aria-label="Wytrzymałość" aria-valuemin="0" aria-valuemax="100"><i id="hp-pasek"></i></span></div>
   <div class="blysk" id="blysk"></div>
   <div class="alarm" id="alarm"></div>
   <div class="baner" id="baner" aria-live="polite"></div>
@@ -260,12 +262,12 @@ try { Object.assign(ust, JSON.parse(localStorage.getItem('eskadra-swit-3d-ust') 
 ust.samolot = ust.samolot === 1 ? 1 : 0;
 // poziomy trudności: mnożniki wrogów (HP, tempo ognia, prędkość pocisków, liczebność), obrażenia gracza, bonusy, okna na bossach
 const TRUDNOSCI = {
-  latwy: { nazwa: 'ŁATWY', opis: '5 żyć, słabsi i wolniej strzelający wrogowie, więcej bonusów, dłuższe okna na bossach. Punkty ×0,75.',
-    zycia: 5, zyciaMax: 7, obr: 0.6, hpWr: 0.8, ogien: 0.8, pocisk: 0.9, ilosc: 0.85, bossHp: 0.75, bonusCd: 8, bonusMax: 4, przecieki: 7, iframe: 0.9, okno: 1.35, ostrz: 1.35, wscieklosc: 0.35, punkty: 0.75 },
-  sredni: { nazwa: 'ŚREDNI', opis: '3 życia, wyważona walka. Bonusy co ok. 12 s, boss wpada w szał przy 50% zdrowia. Punkty ×1.',
+  latwy: { nazwa: 'ŁATWY', opis: '5 żyć, 4 trafienia na życie, słabsi i wolniej strzelający wrogowie, więcej bonusów, dłuższe okna na bossach. Punkty ×0,75.',
+    zycia: 5, zyciaMax: 7, obr: 0.75, hpWr: 0.8, ogien: 0.8, pocisk: 0.9, ilosc: 0.85, bossHp: 0.75, bonusCd: 8, bonusMax: 4, przecieki: 7, iframe: 0.9, okno: 1.35, ostrz: 1.35, wscieklosc: 0.35, punkty: 0.75 },
+  sredni: { nazwa: 'ŚREDNI', opis: '3 życia, 3 trafienia na życie, wyważona walka. Bonusy co ok. 12 s, boss wpada w szał przy 50% zdrowia. Punkty ×1.',
     zycia: 3, zyciaMax: 5, obr: 1, hpWr: 1, ogien: 1, pocisk: 1, ilosc: 1, bossHp: 1, bonusCd: 12, bonusMax: 3, przecieki: 5, iframe: 0.6, okno: 1, ostrz: 1, wscieklosc: 0.5, punkty: 1 },
-  trudny: { nazwa: 'TRUDNY', opis: '2 życia, mocniejsi i szybsi wrogowie, rzadkie bonusy, krótkie okna na bossach, szał bossa już przy 65%. Punkty ×1,5.',
-    zycia: 2, zyciaMax: 4, obr: 1.4, hpWr: 1.3, ogien: 1.25, pocisk: 1.12, ilosc: 1.2, bossHp: 1.3, bonusCd: 18, bonusMax: 2, przecieki: 3, iframe: 0.45, okno: 0.75, ostrz: 0.8, wscieklosc: 0.65, punkty: 1.5 },
+  trudny: { nazwa: 'TRUDNY', opis: '2 życia, 2 trafienia na życie, mocniejsi i szybsi wrogowie, rzadkie bonusy, krótkie okna na bossach, szał bossa już przy 65%. Punkty ×1,5.',
+    zycia: 2, zyciaMax: 4, obr: 1.5, hpWr: 1.3, ogien: 1.25, pocisk: 1.12, ilosc: 1.2, bossHp: 1.3, bonusCd: 18, bonusMax: 2, przecieki: 3, iframe: 0.45, okno: 0.75, ostrz: 0.8, wscieklosc: 0.65, punkty: 1.5 },
 };
 const TRUDNOSCI_ID = ['latwy', 'sredni', 'trudny'];
 if (!TRUDNOSCI[ust.trudnosc]) ust.trudnosc = 'sredni';
@@ -273,8 +275,8 @@ let TR = TRUDNOSCI[ust.trudnosc];
 const zapiszUst = () => { try { localStorage.setItem('eskadra-swit-3d-ust', JSON.stringify(ust)); } catch (e) {} };
 
 const PROFILE = [
-  { klucz: 'player1_delta', nazwa: 'Grom', opis: 'Delta · szybki ogień', cd: 0.15, v: 360, r: 13, ogien: 5, zwrot: 3, silniki: 0.2 },
-  { klucz: 'player2_canard', nazwa: 'Szerszeń', opis: 'Canard · zwrotny', cd: 0.19, v: 520, r: 10, ogien: 3, zwrot: 5, silniki: 0.28 },
+  { klucz: 'player1_delta', nazwa: 'Grom', opis: 'Delta · szybki ogień', cd: 0.15, v: 360, r: 13, hw: 22, hh: 30, ogien: 5, zwrot: 3, silniki: 0.2 },
+  { klucz: 'player2_canard', nazwa: 'Szerszeń', opis: 'Canard · zwrotny', cd: 0.19, v: 520, r: 10, hw: 21, hh: 27, ogien: 3, zwrot: 5, silniki: 0.28 },
 ];
 let profil = PROFILE[ust.samolot];
 
@@ -612,6 +614,7 @@ function przygotujSceneri() {
   SCEN[1] = wyspyPal(PALETY_WYSP[0]).concat([zbudujMese(), zbudujMese(), zbudujKaktusy()]);
   SCEN[2] = wyspyPal(PALETY_WYSP[1]).concat([zbudujKre(), zbudujKre()]);
   SCEN[3] = wyspyPal(PALETY_WYSP[2]).concat([zbudujRuiny(), zbudujRuiny()]);
+  for (const T of SCEN) for (const m of T) m.userData.h = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3()).y; // wysokość szablonu, do ograniczenia skali
 }
 function nowaWyspa(y) {
   const w = { x: losuj(0, W), y, px: losuj(34, 52), yaw: losuj(0, 6.28), los: Math.random(), motyw: sceneriaMotyw, obj: new THREE.Group() };
@@ -622,7 +625,7 @@ function nowaWyspa(y) {
 function ustawModelWyspy(w) {
   if (w.model) { w.obj.remove(w.model); w.model = null; }
   const T = SCEN[w.motyw]; if (!T) return;
-  w.model = T[Math.floor(w.los * T.length) % T.length].clone(true); w.model.rotation.y = w.yaw; w.obj.add(w.model);
+  const tpl = T[Math.floor(w.los * T.length) % T.length]; w.hMod = tpl.userData.h || 1; w.model = tpl.clone(true); w.model.rotation.y = w.yaw; w.obj.add(w.model);
   const hm = haloMat[w.motyw]; w.halo.visible = !!hm; if (hm) w.halo.material = hm;
   w.halo.scale.setScalar(11);
 }
@@ -819,7 +822,7 @@ function przelaczMuzyke() { audioInit(); ust.muzyka = !ust.muzyka; zapiszUst(); 
 let stan = 'menu'; // menu | gra | pauza | koniec
 let punkty = 0, runda = 1, poziom = 1, trud = 1, zycia = 3, zabite = 0, rekord = 0;
 const HP_MAX = 100; // pasek życia gracza; trafienia zabierają jego część, a po wyczerpaniu tracisz jedno życie
-const DMG = { pocisk: 20, zderzenie: 35, bossZderzenie: 45, lod: 10, rakieta: 32, laser: 22, przeciek: 40 }; // bazowe obrażenia (mnożone przez TR.obr)
+const DMG = { pocisk: 34, filler: 26, zderzenie: 50, bossZderzenie: 60, lod: 20, rakieta: 45, laser: 34, przeciek: 50 }; // bazowe obrażenia (mnożone przez TR.obr): na średnim 3 trafienia = utrata życia
 const gracz = { x: 0, y: 0, vx: 0, cel: null, cooldown: 0, bron: 1, szybki: 0, tarcza: 0, niezniszczalny: 0, bank: 0, lod: 0, hp: HP_MAX };
 let pociski = [], wrogowie = [], wrogiePociski = [], wybuchy = [], bonusy = [];
 let blysk = 0, zamroz = 0, doWroga = 0, bonusCd = 0;
@@ -912,7 +915,7 @@ function start(r = 1, p = 1) {
   zmienMotyw(r - 1, true);
   gracz.niezniszczalny = 1.5;
   ePunkty.textContent = '0'; eFala.textContent = r; pokazZycia();
-  pokazEkran(null); el('narzedzia').hidden = false; el('hud-bronie').hidden = false;
+  pokazEkran(null); el('narzedzia').hidden = false; el('hud-bronie').hidden = false; el('hp-box').hidden = false;
   rozpocznijPoziom(true);
   baner(p === POZ_N ? 'BOSS' : 'RUNDA ' + r, p === POZ_N ? NAZWY_BOSSOW[r - 1] : NAZWY_RUND[r - 1]); dzw.runda();
 }
@@ -929,7 +932,7 @@ function zbudujTesty() {
 }
 function doMenu() {
   stan = 'menu'; document.body.classList.remove('gra'); wyczyscSwiat(); zmienMotyw(0, true);
-  el('narzedzia').hidden = true; el('hud-bronie').hidden = true; pokazEkran('menu'); el('btn-start').focus({ preventScroll: true });
+  el('narzedzia').hidden = true; el('hud-bronie').hidden = true; el('hp-box').hidden = true; pokazEkran('menu'); el('btn-start').focus({ preventScroll: true });
 }
 function pauza() {
   if (stan !== 'gra') return;
@@ -941,7 +944,7 @@ function wznow() {
   for (const k in klawisze) klawisze[k] = false;
 }
 function koniec(wygrana) {
-  stan = 'koniec'; document.body.classList.remove('gra'); el('narzedzia').hidden = true; el('hud-bronie').hidden = true; el('boss').hidden = true; el('boss-opis').hidden = true; dzw.koniec();
+  stan = 'koniec'; document.body.classList.remove('gra'); el('narzedzia').hidden = true; el('hud-bronie').hidden = true; el('hp-box').hidden = true; el('boss').hidden = true; el('boss-opis').hidden = true; dzw.koniec();
   const premiaZ = wygrana ? Math.round(zycia * 500 * TR.punkty) : 0; punkty += premiaZ;
   const nowy = !testowy && punkty > rekord;
   if (nowy) { rekord = punkty; try { localStorage.setItem('eskadra-swit-3d-rekord-' + ust.trudnosc, String(rekord)); } catch (e) {} eRekord.textContent = rekord; }
@@ -1335,14 +1338,14 @@ function bossAdmiral(w, dt, og0) { // działa skrzydłowe osłaniają rdzeń
   const zywe = czescZywe(w); w.pancerz = zywe.length ? 0.2 : 1;
   for (const c of zywe) {
     c.strzal -= dt * og0;
-    if (c.strzal <= 0) { c.strzal = 1.7; const cx = w.x + c.dx * S, cy = w.y + c.dy * S; for (const o of [-0.07, 0.07]) celuj(cx, cy + 10 * S, 230 * S, o, { dmg: 16 }); }
+    if (c.strzal <= 0) { c.strzal = 1.7; const cx = w.x + c.dx * S, cy = w.y + c.dy * S; for (const o of [-0.07, 0.07]) celuj(cx, cy + 10 * S, 230 * S, o, { dmg: DMG.pocisk }); }
   }
   w.strzal -= dt * og0;
   if (w.strzal <= 0) {
     w.cykl++;
-    if (zywe.length) { celuj(w.x, w.y + 40 * S, 200 * S, 0, { dmg: 14 }); w.strzal = 2.6; }
-    else if (w.cykl % 2) { for (let i = -3; i <= 3; i++) kula(w.x, w.y + 40 * S, Math.PI / 2 + i * 0.2, 190 * S, { dmg: 14 }); w.strzal = 1.5; }
-    else { for (const o of [-0.2, 0, 0.2]) celuj(w.x, w.y + 40 * S, 220 * S, o, { dmg: 16 }); w.strzal = 1.2; }
+    if (zywe.length) { celuj(w.x, w.y + 40 * S, 200 * S, 0, { dmg: DMG.pocisk }); w.strzal = 2.6; }
+    else if (w.cykl % 2) { for (let i = -3; i <= 3; i++) kula(w.x, w.y + 40 * S, Math.PI / 2 + i * 0.2, 190 * S, { dmg: DMG.pocisk }); w.strzal = 1.5; }
+    else { for (const o of [-0.2, 0, 0.2]) celuj(w.x, w.y + 40 * S, 220 * S, o, { dmg: DMG.pocisk }); w.strzal = 1.2; }
   }
 }
 function bossGunship(w, dt, og0) { // patrol -> ostrzeżenie (czerwony pas) -> szarża -> przegrzanie (×2 obrażeń)
@@ -1352,8 +1355,8 @@ function bossGunship(w, dt, og0) { // patrol -> ostrzeżenie (czerwony pas) -> s
     w.x = bossX(w, 0.3, 0.7); w.y += (w.yCel - w.y) * Math.min(1, dt * 3);
     w.strzal -= dt * og0;
     if (w.strzal <= 0) {
-      if (++w.cykl % 2) { for (let i = -2; i <= 2; i++) kula(w.x, w.y + 40 * S, Math.PI / 2 + i * 0.28, 200 * S, { dmg: 14 }); w.strzal = 1.3; }
-      else { for (const o of [-0.08, 0.08]) celuj(w.x, w.y + 40 * S, 250 * S, o, { dmg: 16 }); w.strzal = 0.9; }
+      if (++w.cykl % 2) { for (let i = -2; i <= 2; i++) kula(w.x, w.y + 40 * S, Math.PI / 2 + i * 0.28, 200 * S, { dmg: DMG.pocisk }); w.strzal = 1.3; }
+      else { for (const o of [-0.08, 0.08]) celuj(w.x, w.y + 40 * S, 250 * S, o, { dmg: DMG.pocisk }); w.strzal = 0.9; }
     }
     if (w.fazaT <= 0) { w.faza = 'ostrz'; w.fazaT = 1.3 * TR.ostrz; komunikat('UWAGA — SZARŻA!'); dzw.alarm(); }
   } else if (w.faza === 'ostrz') {
@@ -1371,11 +1374,11 @@ function bossGunship(w, dt, og0) { // patrol -> ostrzeżenie (czerwony pas) -> s
 }
 function bossLewiatan(w, dt, og0) { // pancerz zamknięty (nietykalny) <-> otwarty (podatny)
   w.mnoz = 1; w.fazaT -= dt;
-  const pierscien = (v) => { const f0 = Math.random() * 6.28; for (let i = 0; i < 14; i++) if (i % 5 !== 0) kula(w.x, w.y + 30 * S, f0 + i / 14 * Math.PI * 2, v * S, { dmg: 12 }); };
+  const pierscien = (v) => { const f0 = Math.random() * 6.28; for (let i = 0; i < 14; i++) if (i % 5 !== 0) kula(w.x, w.y + 30 * S, f0 + i / 14 * Math.PI * 2, v * S, { dmg: DMG.filler }); };
   if (w.faza === 'zamkniety') {
     w.pancerz = 0; w.x = bossX(w, 0.22, 0.45);
     w.strzal -= dt * og0;
-    if (w.strzal <= 0) { celuj(w.x, w.y + 40 * S, 230 * S, 0, { lod: true, kol: '#7fdcff', dmg: 8 }); w.strzal = 1.7; }
+    if (w.strzal <= 0) { celuj(w.x, w.y + 40 * S, 230 * S, 0, { lod: true, kol: '#7fdcff', dmg: DMG.lod }); w.strzal = 1.7; }
     if (w.fazaT < 0.9 && !w.zapowiedz) { w.zapowiedz = true; w.przyg = 0.9; w.przygKol = 0x66ddff; komunikat('PANCERZ SIĘ OTWIERA!'); dzw.alarm(); }
     if (w.fazaT <= 0) { w.faza = 'otwarty'; w.fazaT = 3.2 * TR.okno; w.zapowiedz = false; pierscien(140); }
   } else {
@@ -1395,17 +1398,17 @@ function laserCytadeli(w, dt) { // obrotowa wiązka: cienka linia ostrzega, pote
     L.kat += L.dir * 0.5 * dt; if (L.kat < 0.4 || L.kat > Math.PI - 0.4) { L.dir = -L.dir; L.kat = klamp(L.kat, 0.4, Math.PI - 0.4); }
     w.zn.push(lin(L.kat, 26 * S, 'wiazka', 0.9));
     const dx = gracz.x - w.x, dy = gracz.y - w.y, along = dx * Math.cos(L.kat) + dy * Math.sin(L.kat), perp = Math.abs(-dx * Math.sin(L.kat) + dy * Math.cos(L.kat));
-    if (along > 0 && perp < 13 * S + profil.r * S * 0.5) obrazenia(DMG.laser);
+    if (along > 0 && perp < 13 * S + profil.hw * S * 0.8) obrazenia(DMG.laser);
     if (L.t <= 0) { L.faza = 'przerwa'; L.t = 2.6; }
   }
 }
 function bossCytadela(w, dt, og0) { // generatory osłaniają reaktor; po ich zniszczeniu — laser
   w.mnoz = 1; w.x = W / 2; celujGlowa(w, dt);
   const zywe = czescZywe(w), n = zywe.length; w.pancerz = [1, 0.75, 0.5, 0.3, 0.15][n];
-  for (const c of zywe) { c.strzal -= dt * og0; if (c.strzal <= 0) { c.strzal = 2.6; celuj(w.x + c.dx * S, w.y + c.dy * S, 200 * S, 0, { dmg: 16 }); } }
+  for (const c of zywe) { c.strzal -= dt * og0; if (c.strzal <= 0) { c.strzal = 2.6; celuj(w.x + c.dx * S, w.y + c.dy * S, 200 * S, 0, { dmg: DMG.pocisk }); } }
   w.strzal -= dt * og0;
   if (w.strzal <= 0) {
-    w.sp = (w.sp || 0) + 0.55; kula(w.x, w.y, w.sp, 150 * S, { dmg: 10 }); if (n <= 2) kula(w.x, w.y, w.sp + Math.PI, 150 * S, { dmg: 10 });
+    w.sp = (w.sp || 0) + 0.55; kula(w.x, w.y, w.sp, 150 * S, { dmg: DMG.filler }); if (n <= 2) kula(w.x, w.y, w.sp + Math.PI, 150 * S, { dmg: DMG.filler });
     w.strzal = n ? 0.26 : 0.34; if (++w.cykl % 24 === 0) rakieta(w.x, w.y);
   }
   if (n === 0 && w.laser) laserCytadeli(w, dt);
@@ -1473,10 +1476,11 @@ function strataZycia() {
 function przeciek() { // wróg przeleciał dolną krawędzią
   punkty = Math.max(0, punkty - 25); ePunkty.textContent = punkty;
   lvl.przecieki++; odtworz(el('alarm'), 'pokaz'); dzw.alarm();
-  if (lvl.przecieki >= TR.przecieki) { lvl.przecieki = 0; komunikat('LINIA OBRONY PRZEŁAMANA'); obrazenia(DMG.przeciek, true); }
+  if (lvl.przecieki >= TR.przecieki) { lvl.przecieki = 0; baner('LINIA OBRONY PRZEŁAMANA', '−' + Math.round(DMG.przeciek * TR.obr) + ' wytrzymałości (nie chroni tarcza)'); obrazenia(DMG.przeciek, true); }
   else komunikat('PRZELECIAŁ! ' + lvl.przecieki + ' / ' + TR.przecieki);
   pokazPrzecieki();
 }
+const trafGracza = (x, y, r) => Math.abs(x - gracz.x) < (profil.hw + r) * S && Math.abs(y - (gracz.y - 4 * S)) < (profil.hh + r) * S; // prostokątny kontur samolotu: kadłub razem ze skrzydłami
 const kolizja = (a, b, ra, rb) => { const dx = a.x - b.x, dy = a.y - b.y; return dx * dx + dy * dy < (ra + rb) * (ra + rb); };
 
 // ---------- bonusy (Battle City: migające kafelki z ikonami) ----------
@@ -1579,7 +1583,7 @@ function strzel() {
   const v = 640 * S;
   for (const l of b.lufy) {
     const a = l.a || 0;
-    pociski.push({ x: gracz.x + (l.dx || 0) * S, y: gracz.y - 46 * S, vx: Math.sin(a) * v, vy: -Math.cos(a) * v, dmg: l.dmg || 1, kol: b.kol, gruby: gracz.bron === 4 });
+    pociski.push({ x: gracz.x + (l.dx || 0) * S, y: gracz.y - 46 * S, vx: Math.sin(a) * v, vy: -Math.cos(a) * v, dmg: l.dmg || 1, kol: b.kol, bron: gracz.bron, gruby: gracz.bron === 4 });
   }
   dzw.strzal(gracz.bron);
 }
@@ -1614,7 +1618,7 @@ function krok(dt) {
     gracz.y += (gracz.cel.y - gracz.y) * Math.min(1, dt * 14 * mz);
   }
   gracz.x = klamp(gracz.x, 30 * S, W - 30 * S);
-  gracz.y = klamp(gracz.y, H * (lvl.boss && lvl.faza === 'walka' ? 0.46 : 0.3), H - 60 * S); // w walce z bossem pole gracza jest niższe
+  gracz.y = klamp(gracz.y, H * (lvl.boss && lvl.faza === 'walka' ? 0.46 : 0.3), H - 78 * S); // w walce z bossem pole gracza jest niższe; dół ekranu zajmuje pasek wytrzymałości
   gracz.vx = dt > 0 ? (gracz.x - px0) / dt : 0;
   gracz.niezniszczalny = Math.max(0, gracz.niezniszczalny - dt);
   gracz.szybki = Math.max(0, gracz.szybki - dt);
@@ -1641,8 +1645,8 @@ function krok(dt) {
     if (w.trafiony) w.trafiony = Math.max(0, w.trafiony - dt);
     if (w.czesci) for (const c of w.czesci) if (c.trafiony) c.trafiony = Math.max(0, c.trafiony - dt);
     if (!w.zniszczony && !w.naziemny) {
-      if (w.boss) { if (bossProst(w, gracz.x, gracz.y, profil.r * S * 0.6, 0.8)) obrazenia(DMG.bossZderzenie); }
-      else if (kolizja(w, gracz, w.r * 0.8, profil.r * S)) { w.zniszczony = true; wybuch(w.x, w.y, S); dzw.wybuch(false); obrazenia(DMG.zderzenie); }
+      if (w.boss) { if (bossProst(w, gracz.x, gracz.y, profil.hw * S * 0.7, 0.8)) obrazenia(DMG.bossZderzenie); }
+      else if (kolizja(w, gracz, w.r * 0.8, profil.hw * 0.9 * S)) { w.zniszczony = true; wybuch(w.x, w.y, S); dzw.wybuch(false); obrazenia(DMG.zderzenie); }
     }
   }
   for (const w of wrogowie) if (!w.zniszczony && (w.y - w.r > H + 60 * S || w.x < -140 * S || w.x > W + 140 * S || w.y < -400 * S)) { w.zniszczony = true; if (!w.naziemny && !w.boss && w.y > H * 0.5) przeciek(); }
@@ -1661,7 +1665,7 @@ function krok(dt) {
     }
     if (p.zyje != null && (p.zyje -= dt) <= 0) p.zuzyty = true;
     p.x += p.vx * dt; p.y += p.vy * dt;
-    if (kolizja(p, gracz, 4 * S, (profil.r - 1) * S)) { p.zuzyty = true; if (p.lod) trafLodem(p.dmg); else obrazenia(p.dmg || DMG.pocisk); }
+    if (trafGracza(p.x, p.y, 4 * (p.rozm || 1))) { p.zuzyty = true; if (p.lod) trafLodem(p.dmg); else obrazenia(p.dmg || DMG.pocisk); }
   }
   wrogiePociski = wrogiePociski.filter((p) => !p.zuzyty && p.y < H + 20 && p.y > -20 && p.x > -20 && p.x < W + 20);
 
@@ -1681,6 +1685,8 @@ const pociskGeo = new THREE.BoxGeometry(0.05, 0.05, 0.5);
 const pociskMat = {};
 const wrogPociskGeo = new THREE.SphereGeometry(0.22, 10, 8);
 const wrogPociskMat = new THREE.MeshBasicMaterial({ color: 0xff7a6b });
+const KOL_ZIMA = ['#1c3dff', '#7a1fd1', '#e0127a', '#00a56a']; // na śniegu jasne pociski są niewidoczne: w rundzie 3 mocne, ciemne kolory
+const wrogPociskMatZima = new THREE.MeshBasicMaterial({ color: 0xd7261e });
 const wpMaty = {}, wpMat = (kol) => wpMaty[kol] || (wpMaty[kol] = new THREE.MeshBasicMaterial({ color: new THREE.Color(kol) }));
 const pulaP = [], pulaWP = [], pulaZn = [];
 const znGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
@@ -1700,7 +1706,7 @@ function render3D(dt) {
   for (const t of podlozaTex) for (const tx of [t.tk, t.tn, t.te]) if (tx) { tx.offset.y += ds; tx.offset.x += ds * 0.08; }
   aktualizujMotyw(dt); aktualizujOpady(dt, czas);
 
-  for (const w of wyspy) { const p = ground(w.x, w.y, 0); w.obj.position.set(p.x, 0, p.z); w.obj.scale.setScalar(w.px * S * K0); }
+  for (const w of wyspy) { const p = ground(w.x, w.y, 0); w.obj.position.set(p.x, 0, p.z); w.obj.scale.setScalar(Math.min(w.px * S * K0, 2.0 / (w.hMod || 1))); } // wysokość scenografii < 2.0, żeby samoloty (ALT 2.6) nie wlatywały w skały
   for (const c of chmury) { const p = ground(c.x, c.y, CHMURA_ALT); c.obj.position.set(p.x, CHMURA_ALT, p.z); }
   for (const s of smugi) { const p = ground(s.x, s.y, 1.7); s.obj.position.set(p.x, 1.7, p.z); }
 
@@ -1755,10 +1761,11 @@ function render3D(dt) {
   sync(pulaP, pociski, () => new THREE.Mesh(pociskGeo, pociskMat.x || (pociskMat.x = new THREE.MeshBasicMaterial({ color: 0xffffff }))), (m, p) => {
     const q = ground(p.x, p.y, ALT); m.position.set(q.x, ALT, q.z);
     m.rotation.set(0, Math.atan2(p.vx, p.vy), 0);
-    const sk = p.gruby ? 1.5 : 1; m.scale.set(sk * S, sk * S, S);
-    m.material = pociskMat[p.kol] || (pociskMat[p.kol] = new THREE.MeshBasicMaterial({ color: new THREE.Color(p.kol) }));
+    const zima = MOTYWY[motyw.zmieniono ? motyw.do : motyw.od].typ === 'zima', kol = zima ? KOL_ZIMA[(p.bron || 1) - 1] : p.kol;
+    const sk = (p.gruby ? 1.5 : 1) * (zima ? 1.3 : 1); m.scale.set(sk * S, sk * S, S);
+    m.material = pociskMat[kol] || (pociskMat[kol] = new THREE.MeshBasicMaterial({ color: new THREE.Color(kol) }));
   });
-  sync(pulaWP, wrogiePociski, () => new THREE.Mesh(wrogPociskGeo, wrogPociskMat), (m, p) => { const q = ground(p.x, p.y, ALT); m.position.set(q.x, ALT, q.z); m.scale.setScalar(S * (p.rozm || (p.lod ? 1.35 : 1))); m.material = p.kol ? wpMat(p.kol) : wrogPociskMat; });
+  sync(pulaWP, wrogiePociski, () => new THREE.Mesh(wrogPociskGeo, wrogPociskMat), (m, p) => { const q = ground(p.x, p.y, ALT); m.position.set(q.x, ALT, q.z); m.scale.setScalar(S * (p.rozm || (p.lod ? 1.35 : 1))); m.material = p.kol ? wpMat(p.kol) : (MOTYWY[motyw.zmieniono ? motyw.do : motyw.od].typ === 'zima' ? wrogPociskMatZima : wrogPociskMat); });
 
   // bonusy
   for (const b of bonusy) {
@@ -1812,6 +1819,7 @@ zbudujWybor(); zbudujTrudnosc(); zbudujBossy(); zbudujTesty(); muzEtykiety(); ro
 requestAnimationFrame(petla);
 window.__eskadraOK = true;
 window.__eskadra = {
+  get wrogiePociski() { return wrogiePociski; }, get wyspy() { return wyspy; }, get SCEN() { return SCEN; }, get K0() { return K0; }, trafGracza,
   start, pauza, dodajWroga, ustawTrudnosc, obrazenia, get TR() { return TR; }, get S() { return S; }, get stan() { return stan; }, get wrogowie() { return wrogowie; }, get gracz() { return gracz; }, get lvl() { return lvl; },
   get info() { return { runda, poziom, trud, zycia, hp: gracz.hp, punkty, zabite, bonusy: bonusy.length, wrogiePociski: wrogiePociski.length }; },
   traf(w, d) { trafWroga(w, d); },
