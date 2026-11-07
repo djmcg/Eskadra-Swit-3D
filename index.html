@@ -1254,7 +1254,7 @@ function ruchSnajpera(w, dt) { // wolno schodzi, śledzi gracza w poziomie, strz
   w.y += (w.y < H * 0.12 ? 80 : 38) * S * dt;
   w.x = klamp(w.x + klamp(gracz.x - w.x, -1, 1) * 32 * S * dt, 30 * S, W - 30 * S);
   if (w.y < H * 0.08) return;
-  if (w.przyg > 0) { w.przyg -= dt; if (w.przyg <= 0) celuj(w.x, w.y + 22 * S, 250 * S, 0, { lod: true, kol: '#7fdcff', dmg: DMG.lod }); }
+  if (w.przyg > 0) { w.przyg -= dt; if (w.przyg <= 0) celuj(w.x, w.y + 22 * S, 250 * S, 0, { lod: true, kol: '#00626e', dmg: DMG.lod }); }
   else { w.strzal -= dt; if (w.strzal <= 0 && w.y < H * 0.7) { w.przyg = 0.5; w.przygKol = 0x66ddff; w.strzal = 2.4 / og(); } }
 }
 function kula(x, y, psi, v, extra) { // pocisk wroga pod kątem psi (0 = w prawo, π/2 = w dół ekranu)
@@ -1378,7 +1378,7 @@ function bossLewiatan(w, dt, og0) { // pancerz zamknięty (nietykalny) <-> otwar
   if (w.faza === 'zamkniety') {
     w.pancerz = 0; w.x = bossX(w, 0.22, 0.45);
     w.strzal -= dt * og0;
-    if (w.strzal <= 0) { celuj(w.x, w.y + 40 * S, 230 * S, 0, { lod: true, kol: '#7fdcff', dmg: DMG.lod }); w.strzal = 1.7; }
+    if (w.strzal <= 0) { celuj(w.x, w.y + 40 * S, 230 * S, 0, { lod: true, kol: '#00626e', dmg: DMG.lod }); w.strzal = 1.7; }
     if (w.fazaT < 0.9 && !w.zapowiedz) { w.zapowiedz = true; w.przyg = 0.9; w.przygKol = 0x66ddff; komunikat('PANCERZ SIĘ OTWIERA!'); dzw.alarm(); }
     if (w.fazaT <= 0) { w.faza = 'otwarty'; w.fazaT = 3.2 * TR.okno; w.zapowiedz = false; pierscien(140); }
   } else {
@@ -1471,7 +1471,8 @@ function strataZycia() {
   zycia--; pokazZycia(); dzw.gracz();
   wybuch(gracz.x, gracz.y, 1.4 * S);
   if (zycia <= 0) { gracz.hp = 0; pokazHp(); koniec(false); return; }
-  gracz.hp = HP_MAX; pokazHp(); gracz.bron = Math.max(1, gracz.bron - 1); gracz.szybki = 0; gracz.niezniszczalny = 2; komunikat('UTRACONE ŻYCIE');
+  gracz.hp = HP_MAX; pokazHp(); gracz.szybki = 0; gracz.niezniszczalny = 2; // poziom broni zostaje: nie spada po trafieniu ani po utracie życia
+  komunikat('UTRACONE ŻYCIE');
 }
 function przeciek() { // wróg przeleciał dolną krawędzią
   punkty = Math.max(0, punkty - 25); ePunkty.textContent = punkty;
