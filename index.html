@@ -250,12 +250,12 @@ scene.background = new THREE.Color(SEA_KOL);
 scene.fog = new THREE.Fog(SEA_KOL, 45, 130);
 const camera = new THREE.PerspectiveCamera(FOV, 1, 1, 400);
 
-scene.add(new THREE.HemisphereLight(0xcfeaff, 0x1d5f88, 1.0));
+const hemi = new THREE.HemisphereLight(0xcfeaff, 0x1d5f88, 1.0); scene.add(hemi);
 const slonce = new THREE.DirectionalLight(0xfff1d6, 2.4);
 slonce.castShadow = true; slonce.shadow.mapSize.set(MOBILE ? 1024 : 2048, MOBILE ? 1024 : 2048); slonce.shadow.bias = -0.0004; slonce.shadow.normalBias = 0.05;
 scene.add(slonce); scene.add(slonce.target);
 
-let W = innerWidth, H = innerHeight, S = 1;
+let W = innerWidth, H = innerHeight, S = 1, slCx = 0, slCz = 0;
 const _v = new THREE.Vector3(), _d = new THREE.Vector3(), _g = new THREE.Vector3();
 // piksele ekranu (x,y) -> punkt na płaszczyźnie y = alt (cała logika gry liczy w pikselach)
 function ground(px, py, alt = 0) {
@@ -279,7 +279,7 @@ function rozmiar() {
   const xs = c.map((p) => p.x), zs = c.map((p) => p.z);
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
   const R = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) * 0.62 + 6;
-  slonce.target.position.set(cx, 0, cz); slonce.position.set(cx - 14, 40, cz + 10);
+  slCx = cx; slCz = cz; slonce.target.position.set(cx, 0, cz);
   const sc = slonce.shadow.camera; sc.left = -R; sc.right = R; sc.top = R; sc.bottom = -R; sc.near = 1; sc.far = 120; sc.updateProjectionMatrix();
   particles.mat.uniforms.uScale.value = H * renderer.getPixelRatio() / (2 * Math.tan(FOV / 2 * Math.PI / 180));
   if (stan === 'menu') { gracz.x = W / 2; gracz.y = H - 100 * S; }
@@ -287,35 +287,101 @@ function rozmiar() {
   if (!chmury.length) { for (let i = 0; i < 7; i++) chmury.push(nowaChmura(Math.random() * H)); for (let i = 0; i < 12; i++) smugi.push(nowaSmuga(Math.random() * H)); }
 }
 
-// ---------- morze (proceduralne: kolor + mapa normalnych, skrolowane) ----------
+// ---------- motywy rund: podłoże (proceduralne tekstury kolor + normalne, skrolowane), niebo, światło ----------
 const TILE = 16;
-const morze = (() => {
-  const N = 256, h = new Float32Array(N * N);
-  const fale = Array.from({ length: 9 }, () => ({ ax: Math.floor(losuj(1, 6)) * (Math.random() < 0.5 ? -1 : 1), ay: Math.floor(losuj(1, 6)), f: losuj(0, 6.28), a: losuj(0.4, 1) }));
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    let v = 0; for (const w of fale) v += w.a * Math.sin(2 * Math.PI * (w.ax * x + w.ay * y) / N + w.f);
-    h[y * N + x] = v / 5;
-  }
-  const kol = document.createElement('canvas'), nor = document.createElement('canvas'); kol.width = kol.height = nor.width = nor.height = N;
-  const gk = kol.getContext('2d'), gn = nor.getContext('2d'), ik = gk.createImageData(N, N), inn = gn.createImageData(N, N);
+const MOTYWY = [
+  { nazwa: 'MORZE', typ: 'morze', tlo: 0x1a587c, mgla: [45, 130], niebo: 0xcfeaff, grunt: 0x1d5f88, hemi: 1.0, slonce: 0xfff1d6, sMoc: 2.4, sPoz: [-14, 40, 10], eksp: 0.85,
+    normal: 0.1, rough: 0.95, chmura: [0xffffff, 1], smuga: [0xffffff, 0.10], halo: ['rgba(130,240,220,0.75)', 'rgba(90,215,220,0.35)', 'rgba(90,215,220,0)'], opady: null },
+  { nazwa: 'PUSTYNIA', typ: 'pustynia', tlo: 0xd9a566, mgla: [40, 115], niebo: 0xffe6bd, grunt: 0xa8743c, hemi: 1.05, slonce: 0xffc98a, sMoc: 2.8, sPoz: [-30, 26, 12], eksp: 0.9,
+    normal: 0.8, rough: 1, chmura: [0xe8c48a, 0.5], smuga: [0xf0cf94, 0.16], halo: null, opady: null },
+  { nazwa: 'ZIMA', typ: 'zima', tlo: 0xbcd6ea, mgla: [28, 95], niebo: 0xeaf5ff, grunt: 0x93b1c9, hemi: 1.2, slonce: 0xe6f0ff, sMoc: 1.9, sPoz: [-8, 40, 8], eksp: 0.95,
+    normal: 0.18, rough: 0.55, chmura: [0xffffff, 1.35], smuga: [0xffffff, 0.12], halo: ['rgba(235,248,255,0.7)', 'rgba(205,232,250,0.35)', 'rgba(205,232,250,0)'], opady: { n: 120, kol: [0.95, 0.98, 1], r: 2.6 } },
+  { nazwa: 'TWIERDZA', typ: 'twierdza', tlo: 0x2b100c, mgla: [38, 105], niebo: 0xff9c78, grunt: 0x2a0b07, hemi: 0.75, slonce: 0xff7f50, sMoc: 2.1, sPoz: [18, 26, 16], eksp: 0.8,
+    normal: 0.5, rough: 0.85, chmura: [0x5a3a34, 0.8], smuga: [0xff9050, 0.14], halo: ['rgba(255,130,50,0.6)', 'rgba(220,70,20,0.3)', 'rgba(220,70,20,0)'], opady: { n: 70, kol: [1, 0.5, 0.15], r: 2.2 } },
+];
+for (const m of MOTYWY) { m.cTlo = new THREE.Color(m.tlo); m.cNiebo = new THREE.Color(m.niebo); m.cGrunt = new THREE.Color(m.grunt); m.cSl = new THREE.Color(m.slonce); m.cChm = new THREE.Color(m.chmura[0]); m.cSm = new THREE.Color(m.smuga[0]); }
+
+function zrobPodloze(typ) {
+  const N = 256, h = new Float32Array(N * N), g2 = typ === 'twierdza' ? new Float32Array(N * N) : null;
+  const fale = (n, ax, ay, a) => Array.from({ length: n }, () => ({ ax: Math.floor(losuj(ax[0], ax[1] + 1)) * (Math.random() < 0.5 ? -1 : 1), ay: Math.floor(losuj(ay[0], ay[1] + 1)), f: losuj(0, 6.28), a: losuj(a[0], a[1]) }));
+  const suma = (fs, x, y) => { let v = 0; for (const w of fs) v += w.a * Math.sin(2 * Math.PI * (w.ax * x + w.ay * y) / N + w.f); return v; };
+  let fs, dz = 5, K = 5; // dz: normalizacja wysokości, K: siła normalnych
+  if (typ === 'morze') { fs = fale(9, [1, 5], [1, 5], [0.4, 1]); dz = 5; K = 5; }
+  else if (typ === 'pustynia') { fs = fale(4, [1, 3], [1, 2], [0.7, 1]).concat(fale(6, [8, 14], [1, 3], [0.12, 0.25])); dz = 3; K = 7; }
+  else if (typ === 'zima') { fs = fale(6, [1, 4], [1, 4], [0.3, 0.6]); dz = 3; K = 4; }
+  else { fs = fale(8, [1, 5], [1, 5], [0.4, 1]); dz = 4; K = 6; }
+  const fz = g2 ? fale(6, [2, 6], [2, 6], [0.6, 1]) : null;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { h[y * N + x] = suma(fs, x, y) / dz; if (g2) g2[y * N + x] = suma(fz, x, y) / 3; }
+  const mk = () => { const c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'); return { c, g, im: g.createImageData(N, N) }; };
+  const K1 = mk(), N1 = mk(), E1 = g2 ? mk() : null;
+  const kl = (v) => Math.max(0, Math.min(255, v));
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const i = y * N + x, v = h[i], o = i * 4;
     const hx = h[y * N + (x + 1) % N] - h[y * N + (x + N - 1) % N], hy = h[((y + 1) % N) * N + x] - h[((y + N - 1) % N) * N + x];
-    const nx = -hx * 5, ny = hy * 5, nz = 1, l = Math.hypot(nx, ny, nz);
-    inn.data[o] = (nx / l * 0.5 + 0.5) * 255; inn.data[o + 1] = (ny / l * 0.5 + 0.5) * 255; inn.data[o + 2] = (nz / l * 0.5 + 0.5) * 255; inn.data[o + 3] = 255;
-    ik.data[o] = 24 + v * 4; ik.data[o + 1] = 92 + v * 7; ik.data[o + 2] = 134 + v * 7; ik.data[o + 3] = 255; // spokojny, ciemny, jednolity odcień
+    const nx = -hx * K, ny = hy * K, nz = 1, l = Math.hypot(nx, ny, nz);
+    N1.im.data[o] = (nx / l * 0.5 + 0.5) * 255; N1.im.data[o + 1] = (ny / l * 0.5 + 0.5) * 255; N1.im.data[o + 2] = (nz / l * 0.5 + 0.5) * 255; N1.im.data[o + 3] = 255;
+    let r, gg, b;
+    if (typ === 'morze') { r = 24 + v * 4; gg = 92 + v * 7; b = 134 + v * 7; } // spokojny, ciemny, jednolity odcień
+    else if (typ === 'pustynia') { r = 198 + v * 16; gg = 152 + v * 14; b = 94 + v * 10; }
+    else if (typ === 'zima') { const n = (Math.random() - 0.5) * 7; r = 224 + v * 6 + n; gg = 235 + v * 5 + n; b = 245 + v * 4 + n; }
+    else {
+      const w = Math.max(0, 1 - Math.abs(g2[i]) / 0.055), lawa = w * w;
+      r = 36 + v * 5 + (255 - 36) * lawa; gg = 28 + v * 4 + (96 + v * 10 - 28) * lawa; b = 30 + v * 4 + (22 - 30) * lawa;
+      E1.im.data[o] = 255 * lawa; E1.im.data[o + 1] = 105 * lawa; E1.im.data[o + 2] = 22 * lawa; E1.im.data[o + 3] = 255;
+    }
+    K1.im.data[o] = kl(r); K1.im.data[o + 1] = kl(gg); K1.im.data[o + 2] = kl(b); K1.im.data[o + 3] = 255;
   }
-  gk.putImageData(ik, 0, 0); gn.putImageData(inn, 0, 0);
-  const tk = new THREE.CanvasTexture(kol), tn = new THREE.CanvasTexture(nor);
-  for (const t of [tk, tn]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(600 / TILE, 600 / TILE); t.anisotropy = 4; }
-  tk.colorSpace = THREE.SRGBColorSpace;
-  const mat = new THREE.MeshStandardMaterial({ map: tk, normalMap: tn, normalScale: new THREE.Vector2(0.1, 0.1), roughness: 0.95, metalness: 0.0 });
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), mat);
-  m.rotation.x = -Math.PI / 2; m.position.y = -0.15; m.receiveShadow = true;
-  scene.add(m);
-  return { tk, tn };
-})();
+  K1.g.putImageData(K1.im, 0, 0); N1.g.putImageData(N1.im, 0, 0); if (E1) E1.g.putImageData(E1.im, 0, 0);
+  if (typ === 'zima') { // pęknięcia i plamy ciemniejszego lodu (rysowane z zawijaniem, żeby kafel się zszywał)
+    const g = K1.g;
+    for (const dx of [-N, 0, N]) for (const dy of [-N, 0, N]) {
+      g.save(); g.translate(dx, dy);
+      const rnd = [];
+      for (let i = 0; i < 14; i++) rnd.push([Math.random() * N, Math.random() * N, Math.random() * 6.28, losuj(40, 90)]);
+      g.strokeStyle = 'rgba(105,140,178,0.55)'; g.lineWidth = 1.1; g.lineCap = 'round';
+      for (const [x0, y0, a0, len] of rnd) { g.beginPath(); g.moveTo(x0, y0); let x = x0, y = y0, a = a0; for (let k = 0; k < 4; k++) { a += losuj(-0.7, 0.7); x += Math.cos(a) * len / 4; y += Math.sin(a) * len / 4; g.lineTo(x, y); } g.stroke(); }
+      g.restore();
+    }
+  }
+  const mkTex = (o, srgb) => { const t = new THREE.CanvasTexture(o.c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(600 / TILE, 600 / TILE); t.anisotropy = 4; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
+  return { tk: mkTex(K1, true), tn: mkTex(N1, false), te: E1 ? mkTex(E1, true) : null };
+}
+const podlozaTex = MOTYWY.map((m) => zrobPodloze(m.typ));
+const podlozeMat = MOTYWY.map((m, i) => new THREE.MeshStandardMaterial({
+  map: podlozaTex[i].tk, normalMap: podlozaTex[i].tn, normalScale: new THREE.Vector2(m.normal, m.normal), roughness: m.rough, metalness: 0.0,
+  emissive: podlozaTex[i].te ? 0xffffff : 0x000000, emissiveMap: podlozaTex[i].te, emissiveIntensity: 0.95,
+}));
+const podloze = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), podlozeMat[0]);
+podloze.rotation.x = -Math.PI / 2; podloze.position.y = -0.15; podloze.receiveShadow = true;
+scene.add(podloze);
 let przesuniecie = 0;
+
+// przejście między motywami: kolory/światło płynnie, podłoże i scenografia w błysku w trakcie "rozpędu"
+const motyw = { od: 0, do: 0, t: 99, zmieniono: true };
+const MOTYW_CZAS = 2.6, MOTYW_ZAMIANA = 0.9, ROZPED_T = 3.2;
+let sceneriaMotyw = 0, rozped = 0;
+const boostTla = () => 1 + 3 * Math.max(0, Math.min(1, rozped, (ROZPED_T - rozped) * 2));
+function zmienMotyw(i, natychmiast) {
+  if (natychmiast) {
+    motyw.od = motyw.do = i; motyw.t = 99; motyw.zmieniono = true; rozped = 0;
+    podloze.material = podlozeMat[i]; sceneriaMotyw = i;
+    for (const w of wyspy) { w.motyw = i; ustawModelWyspy(w); }
+    return;
+  }
+  motyw.od = motyw.do; motyw.do = i; motyw.t = 0; motyw.zmieniono = false; rozped = ROZPED_T;
+}
+function aktualizujMotyw(dt) {
+  motyw.t += dt;
+  if (!motyw.zmieniono && motyw.t >= MOTYW_ZAMIANA) { motyw.zmieniono = true; podloze.material = podlozeMat[motyw.do]; sceneriaMotyw = motyw.do; blysk = 1; }
+  const k = klamp(motyw.t / MOTYW_CZAS, 0, 1), e = k * k * (3 - 2 * k), A = MOTYWY[motyw.od], B = MOTYWY[motyw.do], L = (a, b) => a + (b - a) * e;
+  scene.background.copy(A.cTlo).lerp(B.cTlo, e); scene.fog.color.copy(scene.background); scene.fog.near = L(A.mgla[0], B.mgla[0]); scene.fog.far = L(A.mgla[1], B.mgla[1]);
+  hemi.color.copy(A.cNiebo).lerp(B.cNiebo, e); hemi.groundColor.copy(A.cGrunt).lerp(B.cGrunt, e); hemi.intensity = L(A.hemi, B.hemi);
+  slonce.color.copy(A.cSl).lerp(B.cSl, e); slonce.intensity = L(A.sMoc, B.sMoc);
+  slonce.position.set(slCx + L(A.sPoz[0], B.sPoz[0]), L(A.sPoz[1], B.sPoz[1]), slCz + L(A.sPoz[2], B.sPoz[2]));
+  renderer.toneMappingExposure = L(A.eksp, B.eksp);
+  smugaMat.color.copy(A.cSm).lerp(B.cSm, e); smugaMat.opacity = L(A.smuga[1], B.smuga[1]);
+  for (const c of chmury) { c.obj.material.color.copy(A.cChm).lerp(B.cChm, e); c.obj.material.opacity = Math.min(0.85, c.op * L(A.chmura[1], B.chmura[1])); }
+}
 
 // ---------- cząsteczki (wybuchy) ----------
 const particles = (() => {
@@ -332,6 +398,30 @@ const particles = (() => {
   const pts = new THREE.Points(g, mat); pts.frustumCulled = false; scene.add(pts);
   return { MAX, pos, col, size, g, mat, pts, n: 0 };
 })();
+// opady (śnieg / popiół): osobny zestaw punktów na tym samym materiale
+const opady = (() => {
+  const MAX = 140, pos = new Float32Array(MAX * 3), col = new Float32Array(MAX * 4), size = new Float32Array(MAX);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('kol', new THREE.BufferAttribute(col, 4).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('rozm', new THREE.BufferAttribute(size, 1).setUsage(THREE.DynamicDrawUsage));
+  const pts = new THREE.Points(g, particles.mat); pts.frustumCulled = false; scene.add(pts);
+  const platki = Array.from({ length: MAX }, () => ({ u: Math.random(), v: Math.random(), vy: losuj(40, 90), ph: losuj(0, 6.28), r: losuj(0.6, 1.4) }));
+  return { MAX, pos, col, size, g, platki };
+})();
+function aktualizujOpady(dt, czas) {
+  const T = MOTYWY[motyw.zmieniono ? motyw.do : motyw.od], o = T.opady, n = o ? o.n : 0, ruch = stan === 'pauza' ? 0 : dt * boostTla();
+  for (let i = 0; i < n; i++) {
+    const f = opady.platki[i];
+    f.v += f.vy * ruch / H; if (f.v > 1.05) { f.v = -0.05; f.u = Math.random(); }
+    const p = ground((f.u + Math.sin(czas * 0.8 + f.ph) * 0.02) * W, f.v * H, ALT + 1.2);
+    opady.pos[i * 3] = p.x; opady.pos[i * 3 + 1] = ALT + 1.2; opady.pos[i * 3 + 2] = p.z;
+    opady.col[i * 4] = o.kol[0]; opady.col[i * 4 + 1] = o.kol[1]; opady.col[i * 4 + 2] = o.kol[2]; opady.col[i * 4 + 3] = 0.8;
+    opady.size[i] = pxJ(o.r * f.r * 2.2);
+  }
+  opady.g.setDrawRange(0, n);
+  for (const a of ['position', 'kol', 'rozm']) opady.g.attributes[a].needsUpdate = true;
+}
 
 // ============================================================
 // MODELE (GLB z Blendera)
@@ -372,6 +462,7 @@ function wczytajModele() {
 }
 wczytajModele();
 function gotowe() {
+  przygotujSceneri();
   for (let i = 0; i < 2; i++) przygotujGracza(i);
   bladLadowania = false; el('btn-start').disabled = false; el('btn-start').textContent = 'Start';
   for (const w of wyspy) ustawModelWyspy(w);
@@ -408,31 +499,85 @@ function przygotujGracza(i) {
   graczModele[i] = { g, model, plomienie, tarcza };
 }
 
-// ---------- wyspy, chmury, smugi prędkości ----------
+// ---------- wyspy / scenografia, chmury, smugi prędkości ----------
 const wyspy = [], chmury = [], smugi = [];
-const halo = (() => {
+function zrobHalo(st) {
   const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
   const gr = g.createRadialGradient(64, 64, 20, 64, 64, 64);
-  gr.addColorStop(0, 'rgba(130,240,220,0.75)'); gr.addColorStop(0.6, 'rgba(90,215,220,0.35)'); gr.addColorStop(1, 'rgba(90,215,220,0)');
+  gr.addColorStop(0, st[0]); gr.addColorStop(0.6, st[1]); gr.addColorStop(1, st[2]);
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
   return new THREE.CanvasTexture(c);
-})();
-const haloMat = new THREE.MeshBasicMaterial({ map: halo, transparent: true, depthWrite: false });
+}
+const haloMat = MOTYWY.map((m) => (m.halo ? new THREE.MeshBasicMaterial({ map: zrobHalo(m.halo), transparent: true, depthWrite: false }) : null));
+const SCEN = []; // SCEN[motyw] = szablony scenografii (budowane po wczytaniu modeli)
+function przekolorujModel(klucz, mapa) { // kopia modelu z przemalowanymi materiałami (nazwa materiału bez prefiksu, np. Island1_Grass -> Grass)
+  const o = MODELE[klucz].clone(true);
+  o.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); const k = m.material.name.replace(/^[A-Za-z]+\d*_/, ''); if (mapa[k] != null) m.material.color.setHex(mapa[k]); } });
+  return o;
+}
+const bryla = (geo, kol, x, y, z, opt) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial(Object.assign({ color: kol, flatShading: true, roughness: 0.95, metalness: 0 }, opt))); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; return m; };
+function zbudujMese() {
+  const g = new THREE.Group();
+  g.add(bryla(new THREE.CylinderGeometry(1.5, 1.9, 0.7, 7), 0xb5683d, 0, 0.35, 0));
+  g.add(bryla(new THREE.CylinderGeometry(1.15, 1.4, 0.6, 7), 0xc9804f, 0.1, 1.0, -0.05));
+  g.add(bryla(new THREE.CylinderGeometry(0.8, 1.0, 0.45, 6), 0xd9a066, 0.15, 1.52, 0));
+  for (const [x, z, r] of [[-1.9, 0.9, 0.35], [1.8, -1.1, 0.28], [1.4, 1.5, 0.22]]) g.add(bryla(new THREE.DodecahedronGeometry(r), 0xa4592f, x, r * 0.5, z));
+  return g;
+}
+function zbudujKaktusy() {
+  const g = new THREE.Group();
+  for (const [x, z, hh] of [[-1, 0.3, 0.9], [0.6, -0.6, 0.7], [0.2, 0.9, 0.5]]) {
+    g.add(bryla(new THREE.CylinderGeometry(0.12, 0.14, hh, 6), 0x4f7a34, x, hh / 2, z));
+    g.add(bryla(new THREE.CylinderGeometry(0.08, 0.09, hh * 0.45, 6), 0x4f7a34, x + 0.22, hh * 0.6, z));
+  }
+  g.add(bryla(new THREE.CylinderGeometry(1.5, 1.7, 0.1, 8), 0xe2bd7d, 0, 0.05, 0));
+  return g;
+}
+function zbudujKre() {
+  const g = new THREE.Group();
+  g.add(bryla(new THREE.CylinderGeometry(2.1, 2.3, 0.12, 8), 0xcfe6f5, 0, 0.06, 0, { roughness: 0.4 }));
+  g.add(bryla(new THREE.ConeGeometry(0.95, 1.9, 5), 0xe6f4ff, -0.3, 1.0, 0.1, { roughness: 0.35 }));
+  g.add(bryla(new THREE.ConeGeometry(0.6, 1.2, 5), 0xd2e9fa, 0.8, 0.65, -0.5, { roughness: 0.35 }));
+  g.add(bryla(new THREE.ConeGeometry(0.45, 0.9, 5), 0xf4fbff, -1.1, 0.5, -0.7, { roughness: 0.35 }));
+  return g;
+}
+function zbudujRuiny() {
+  const g = new THREE.Group();
+  g.add(bryla(new THREE.BoxGeometry(3.6, 0.22, 3.0), 0x2b2326, 0, 0.11, 0));
+  for (const [x, z, hh] of [[-1.3, -1, 1.4], [-0.4, -1.1, 0.7], [1.2, -0.9, 1.2], [1.3, 0.9, 0.5], [-1.2, 1, 1.0]]) {
+    const m = bryla(new THREE.CylinderGeometry(0.22, 0.27, hh, 6), 0x3b3235, x, 0.22 + hh / 2, z); m.rotation.z = losuj(-0.1, 0.1); g.add(m);
+  }
+  g.add(bryla(new THREE.BoxGeometry(0.9, 0.08, 0.5), 0xff6a1a, 0.2, 0.24, 0.2, { emissive: 0xff5a10, emissiveIntensity: 1.2 }));
+  return g;
+}
+const PALETY_WYSP = [
+  { Grass: 0x8a9a3a, GrassLight: 0xa8a64a, Rock: 0x9a5a38, RockLight: 0xc0794a, Sand: 0xe8c88a, SandWet: 0xd0a96e, Tree: 0x4d6b2a, TreeLight: 0x6a8a34, Palm: 0x3f8a3a, Roof: 0xb4552d, Wall: 0xf0dcb0 }, // pustynia
+  { Grass: 0xf2f7fc, GrassLight: 0xdce9f5, Rock: 0x6f7f92, RockLight: 0xa9b8c8, Sand: 0xdfeaf4, SandWet: 0xaac3d8, Tree: 0x123d33, TreeLight: 0x1f5a48, Palm: 0x1f5a48, Roof: 0xe8eef5, Wall: 0xd8e2ec }, // zima
+  { Grass: 0x2c2220, GrassLight: 0x3d2e29, Rock: 0x1d1a1c, RockLight: 0x3a3234, Sand: 0x2a1c18, SandWet: 0x6a2a14, Tree: 0x0f0c0c, TreeLight: 0x241616, Palm: 0x1a1212, Roof: 0x4a1a14, Wall: 0x2a2424 }, // twierdza
+];
+function przygotujSceneri() {
+  SCEN[0] = [MODELE.island_1, MODELE.island_2, MODELE.island_3];
+  const wyspyPal = (p) => [przekolorujModel('island_2', p), przekolorujModel('island_1', p), przekolorujModel('island_3', p)];
+  SCEN[1] = wyspyPal(PALETY_WYSP[0]).concat([zbudujMese(), zbudujMese(), zbudujKaktusy()]);
+  SCEN[2] = wyspyPal(PALETY_WYSP[1]).concat([zbudujKre(), zbudujKre()]);
+  SCEN[3] = wyspyPal(PALETY_WYSP[2]).concat([zbudujRuiny(), zbudujRuiny()]);
+}
 function nowaWyspa(y) {
-  const w = { x: losuj(0, W), y, px: losuj(34, 52), yaw: losuj(0, 6.28), klucz: 'island_' + (1 + Math.floor(Math.random() * 3)), obj: new THREE.Group() };
-  const h = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), haloMat); h.rotation.x = -Math.PI / 2; h.position.y = 0.02; h.renderOrder = 1;
+  const w = { x: losuj(0, W), y, px: losuj(34, 52), yaw: losuj(0, 6.28), los: Math.random(), motyw: sceneriaMotyw, obj: new THREE.Group() };
+  const h = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), haloMat[0]); h.rotation.x = -Math.PI / 2; h.position.y = 0.02; h.renderOrder = 1;
   w.obj.add(h); w.halo = h; scene.add(w.obj);
   ustawModelWyspy(w); return w;
 }
 function ustawModelWyspy(w) {
   if (w.model) { w.obj.remove(w.model); w.model = null; }
-  if (!MODELE[w.klucz]) return;
-  w.model = MODELE[w.klucz].clone(true); w.model.rotation.y = w.yaw; w.obj.add(w.model);
+  const T = SCEN[w.motyw]; if (!T) return;
+  w.model = T[Math.floor(w.los * T.length) % T.length].clone(true); w.model.rotation.y = w.yaw; w.obj.add(w.model);
+  const hm = haloMat[w.motyw]; w.halo.visible = !!hm; if (hm) w.halo.material = hm;
   w.halo.scale.setScalar(11);
 }
-function przesunWyspe(w) { // ponowne użycie po wyjściu za ekran
+function przesunWyspe(w) { // ponowne użycie po wyjściu za ekran (od razu w aktualnym motywie)
   w.x = losuj(0, W); w.y = -w.px * 8 - Math.random() * 200; w.px = losuj(34, 52); w.yaw = losuj(0, 6.28);
-  w.klucz = 'island_' + (1 + Math.floor(Math.random() * 3)); ustawModelWyspy(w);
+  w.los = Math.random(); w.motyw = sceneriaMotyw; ustawModelWyspy(w);
 }
 
 function teksturaChmury(wariant) {
@@ -448,10 +593,11 @@ const chmuraTex = [0, 1, 2].map(teksturaChmury);
 const CHMURA_ALT = 1.8; // pod samolotami (ALT = 2.6), nad wodą i wyspami
 function nowaChmura(y) {
   const t = Math.floor(Math.random() * 3);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.5), new THREE.MeshBasicMaterial({ map: chmuraTex[t], transparent: true, opacity: losuj(0.40, 0.55), depthWrite: false, fog: false }));
+  const op = losuj(0.40, 0.55);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.5), new THREE.MeshBasicMaterial({ map: chmuraTex[t], transparent: true, opacity: op, depthWrite: false, fog: false }));
   m.rotation.x = -Math.PI / 2; m.renderOrder = 2;
   const sz = losuj(12, 26); m.scale.set(sz, sz, 1); scene.add(m);
-  return { x: losuj(-40, W + 40), y, v: losuj(110, 190), obj: m, sz };
+  return { x: losuj(-40, W + 40), y, v: losuj(110, 190), obj: m, sz, op };
 }
 const smugaMat = new THREE.SpriteMaterial({ color: 0xffffff, transparent: true, opacity: 0.10, depthWrite: false, fog: false });
 function nowaSmuga(y) {
@@ -678,7 +824,7 @@ function start() {
   baner('RUNDA 1', NAZWY_RUND[0]); dzw.runda();
 }
 function doMenu() {
-  stan = 'menu'; document.body.classList.remove('gra'); wyczyscSwiat();
+  stan = 'menu'; document.body.classList.remove('gra'); wyczyscSwiat(); zmienMotyw(0, true);
   el('narzedzia').hidden = true; el('hud-bronie').hidden = true; pokazEkran('menu'); el('btn-start').focus({ preventScroll: true });
 }
 function pauza() {
@@ -784,7 +930,6 @@ const DOSTEP = [ // typ: [od którego poziomu, waga losowania]
 const ELITA = new Set(['bombowiec', 'smiglowiec', 'snajper', 'bunkier']);
 let lvl = { faza: 'walka', zostalo: 0, ile: 0, odstep: 1, boss: false, final: false, zabitePoz: 0, bonusyPoz: 0, przecieki: 0, przerwa: 0 };
 
-function zmienMotyw() {}
 function pokazPoziom() { ePoziom.textContent = Math.max(1, poziom); }
 function pokazPrzecieki() {
   const n = lvl.przecieki; ePrzecieki.hidden = runda === RUNDY_N;
@@ -992,10 +1137,12 @@ function strzel() {
 function krok(dt) {
   if (stan === 'pauza') return;
   const tempo = stan === 'gra' ? 1 : 0.4;
-  przesuniecie += 60 * S * dt * tempo;
-  for (const w of wyspy) { w.y += 60 * S * dt * tempo; if (w.y - w.px * 4 > H) przesunWyspe(w); }
-  for (const c of chmury) { c.y += c.v * S * dt * tempo; if (c.y > H + 200) { c.y = -220 - Math.random() * 300; c.x = losuj(-40, W + 40); } }
-  for (const s of smugi) { s.y += s.v * S * dt * tempo; if (s.y > H + 120) { s.y = -150 - Math.random() * 200; s.x = losuj(0, W); } }
+  if (rozped > 0) rozped = Math.max(0, rozped - dt);
+  const tl = tempo * boostTla();
+  przesuniecie += 60 * S * dt * tl;
+  for (const w of wyspy) { w.y += 60 * S * dt * tl; if (w.y - w.px * 4 > H) przesunWyspe(w); }
+  for (const c of chmury) { c.y += c.v * S * dt * tl; if (c.y > H + 200) { c.y = -220 - Math.random() * 300; c.x = losuj(-40, W + 40); } }
+  for (const s of smugi) { s.y += s.v * S * dt * tl; if (s.y > H + 120) { s.y = -150 - Math.random() * 200; s.x = losuj(0, W); } }
   for (const b of wybuchy) { b.t += dt; b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.92; b.vy *= 0.92; }
   wybuchy = wybuchy.filter((b) => b.t < b.max);
   blysk = Math.max(0, blysk - dt * 1.8);
@@ -1080,8 +1227,9 @@ const pxJ = (px) => px * S * K0; // piksele -> jednostki świata
 function render3D(dt) {
   const czas = performance.now() / 1000;
   // morze: skrol w stronę dołu ekranu
-  const ds = (60 * S * K0 * dt * (stan === 'gra' ? 1 : stan === 'pauza' ? 0 : 0.4)) / TILE;
-  morze.tk.offset.y += ds; morze.tn.offset.y += ds; morze.tk.offset.x += ds * 0.08; morze.tn.offset.x += ds * 0.08;
+  const ds = (60 * S * K0 * dt * (stan === 'gra' ? 1 : stan === 'pauza' ? 0 : 0.4) * boostTla()) / TILE;
+  for (const t of podlozaTex) for (const tx of [t.tk, t.tn, t.te]) if (tx) { tx.offset.y += ds; tx.offset.x += ds * 0.08; }
+  aktualizujMotyw(dt); aktualizujOpady(dt, czas);
 
   for (const w of wyspy) { const p = ground(w.x, w.y, 0); w.obj.position.set(p.x, 0, p.z); w.obj.scale.setScalar(w.px * S * K0); }
   for (const c of chmury) { const p = ground(c.x, c.y, CHMURA_ALT); c.obj.position.set(p.x, CHMURA_ALT, p.z); }
