@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">Eskadra Świt 2 — obrona wybrzeża</title>
+  <desc id="desc">Samolot myśliwski nad morzem o świcie, z wyspami i złotym słońcem na horyzoncie.</desc>
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1">
+      <stop stop-color="#092b46"/>
+      <stop offset=".58" stop-color="#155477"/>
+      <stop offset="1" stop-color="#e28c48"/>
+    </linearGradient>
+    <linearGradient id="sea" x2="0" y2="1">
+      <stop stop-color="#1b6b91"/>
+      <stop offset="1" stop-color="#082f50"/>
+    </linearGradient>
+    <linearGradient id="sun" x2="0" y2="1">
+      <stop stop-color="#ffe9a8"/>
+      <stop offset="1" stop-color="#f2b134"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="13"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="420" fill="url(#sky)"/>
+  <circle cx="920" cy="177" r="88" fill="#ffc85b" opacity=".28" filter="url(#glow)"/>
+  <circle cx="920" cy="177" r="59" fill="url(#sun)"/>
+  <path d="M0 245c180-25 310 25 480 0s330-21 480 4 160 6 240-5v176H0Z" fill="url(#sea)"/>
+  <path d="M0 273c155-18 280 20 430 2s270-17 405 2 250 17 365-2M0 322c180-18 300 18 470 0s310-15 445 3 190 11 285-2M0 370c165-14 295 15 460 0s280-14 430 2 210 13 310-2" fill="none" stroke="#a9d8df" stroke-opacity=".22" stroke-width="3"/>
+  <path d="M755 256q36-29 82-9 37-29 77-6 28-23 59-4l26 20Z" fill="#245943"/>
+  <path d="M777 256q38-19 73-3 36-19 72-1 35-18 60 4Z" fill="#d5c77e"/>
+  <path d="M167 287q28-22 60-7 29-20 62-2 22-18 48-5l22 17Z" fill="#245943"/>
+  <path d="M185 287q30-14 56-3 30-14 55-1 25-13 42 4Z" fill="#d5c77e"/>
+  <g transform="translate(590 185)" fill="#f3eee1">
+    <path d="M-104 4 104 4 76 18-76 18Z"/>
+    <path d="M-27 21 27 21 18 31-18 31Z"/>
+    <path d="M-20 18Q0-60 20 18Z"/>
+    <path d="M-14-2Q0-20 14-2Q8 10-8 10Z" fill="#83b6c8"/>
+    <path d="M0-57v-20" stroke="#ffe3a0" stroke-width="5" stroke-linecap="round"/>
+    <path d="M-20-77h40" stroke="#ffe3a0" stroke-opacity=".65" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(275 120) scale(.52)" fill="#d17a56" opacity=".9">
+    <path d="M-104 4 104 4 76 18-76 18Z"/>
+    <path d="M-27 21 27 21 18 31-18 31Z"/>
+    <path d="M-20 18Q0-60 20 18Z"/>
+  </g>
+  <g transform="translate(882 104) scale(.38)" fill="#d17a56" opacity=".85">
+    <path d="M-104 4 104 4 76 18-76 18Z"/>
+    <path d="M-27 21 27 21 18 31-18 31Z"/>
+    <path d="M-20 18Q0-60 20 18Z"/>
+  </g>
+  <rect x="60" y="52" width="9" height="92" rx="4" fill="#f2b134"/>
+  <text x="91" y="92" fill="#f2b134" font-family="Impact, 'Arial Black', sans-serif" font-size="54" letter-spacing="2">ESKADRA ŚWIT 2</text>
+  <text x="94" y="132" fill="#f4efe1" font-family="Arial, sans-serif" font-size="20" letter-spacing="5">ARCADE'OWA OBRONA WYBRZEŻA</text>
+  <text x="94" y="164" fill="#f4efe1" fill-opacity=".72" font-family="Arial, sans-serif" font-size="16" letter-spacing="2">WZBIJ SIĘ W POWIETRZE. BROŃ MORZA. PRZETRWAJ KOLEJNĄ FALĘ.</text>
+</svg>
