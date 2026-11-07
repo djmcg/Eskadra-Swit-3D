@@ -510,10 +510,13 @@ function zrobHalo(st) {
 }
 const haloMat = MOTYWY.map((m) => (m.halo ? new THREE.MeshBasicMaterial({ map: zrobHalo(m.halo), transparent: true, depthWrite: false }) : null));
 const SCEN = []; // SCEN[motyw] = szablony scenografii (budowane po wczytaniu modeli)
-function przekolorujModel(klucz, mapa) { // kopia modelu z przemalowanymi materiałami (nazwa materiału bez prefiksu, np. Island1_Grass -> Grass)
+function przekolor(obj, mapa) { // zmiana kolorów materiałów wg nazwy (Island1_Grass / E1_Hull -> Grass / Hull); materiały muszą być już sklonowane
+  obj.traverse((m) => { if (m.isMesh) { const k = m.material.name.replace(/^[A-Za-z]+\d*_/, ''); if (mapa[k] != null) m.material.color.setHex(mapa[k]); } });
+}
+function przekolorujModel(klucz, mapa) {
   const o = MODELE[klucz].clone(true);
-  o.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); const k = m.material.name.replace(/^[A-Za-z]+\d*_/, ''); if (mapa[k] != null) m.material.color.setHex(mapa[k]); } });
-  return o;
+  o.traverse((m) => { if (m.isMesh) m.material = m.material.clone(); });
+  przekolor(o, mapa); return o;
 }
 const bryla = (geo, kol, x, y, z, opt) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial(Object.assign({ color: kol, flatShading: true, roughness: 0.95, metalness: 0 }, opt))); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; return m; };
 function zbudujMese() {
@@ -679,6 +682,7 @@ const dzw = {
   klik() { ton(700, 950, 0.05, 'square', 0.08); },
   poziom() { [659, 880].forEach((f, i) => ton(f, f, 0.12, 'square', 0.09, teraz(i * 0.09))); },
   alarm() { ton(220, 150, 0.22, 'sawtooth', 0.14); },
+  lod() { ton(1800, 600, 0.25, 'triangle', 0.12); szum(0.18, 0.2, 7000, 2500, 'highpass'); },
 };
 
 // ---- muzyka bojowa: szybki arpeggiator (C64), tnący bas, dynamiczna perkusja, lead "supersaw" z pompowaniem ----
@@ -767,7 +771,7 @@ let stan = 'menu'; // menu | gra | pauza | koniec
 let punkty = 0, runda = 1, poziom = 1, trud = 1, zycia = 3, zabite = 0, rekord = 0;
 try { rekord = parseInt(localStorage.getItem('eskadra-swit-3d-rekord') || '0', 10) || 0; } catch (e) {}
 eRekord.textContent = rekord;
-const gracz = { x: 0, y: 0, vx: 0, cel: null, cooldown: 0, bron: 1, szybki: 0, tarcza: 0, niezniszczalny: 0, bank: 0 };
+const gracz = { x: 0, y: 0, vx: 0, cel: null, cooldown: 0, bron: 1, szybki: 0, tarcza: 0, niezniszczalny: 0, bank: 0, lod: 0 };
 let pociski = [], wrogowie = [], wrogiePociski = [], wybuchy = [], bonusy = [];
 let blysk = 0, zamroz = 0, doWroga = 0, bonusCd = 0;
 const klawisze = {};
@@ -778,7 +782,8 @@ const BRONIE = [
   { nazwa: 'ROZPROSZENIE', cd: 1.05, kol: '#ff9f5a', lufy: [{}, { a: -0.17 }, { a: 0.17 }] },
   { nazwa: 'PLAZMA', cd: 1.1, kol: '#7fe8ff', lufy: [{ dmg: 2 }, { a: -0.12 }, { a: 0.12 }, { a: -0.26 }, { a: 0.26 }] },
 ];
-const ROZ_R = { mysliwiec: 19, zygzak: 20, bombowiec: 42 };
+const ROZ_R = { mysliwiec: 19, zygzak: 20, bombowiec: 42, kamikadze: 14, smiglowiec: 30, snajper: 22 };
+const PX_ENEMY = { mysliwiec: 15, zygzak: 15, bombowiec: 24, kamikadze: 11.5, smiglowiec: 17, snajper: 16.5 };
 
 // ---------- UI ----------
 function pokazEkran(n) { for (const k in ekrany) ekrany[k].hidden = k !== n; }
@@ -809,7 +814,7 @@ function wyczyscSwiat() {
   for (const b of bonusy) { scene.remove(b.spr); scene.remove(b.glow); }
   pociski = []; wrogowie = []; wrogiePociski = []; wybuchy = []; bonusy = [];
   blysk = 0; zamroz = 0; el('boss').hidden = true;
-  gracz.x = W / 2; gracz.y = H - 100 * S; gracz.cel = null; gracz.bron = 1; gracz.szybki = 0; gracz.tarcza = 0; gracz.cooldown = 0; gracz.vx = 0; gracz.bank = 0;
+  gracz.x = W / 2; gracz.y = H - 100 * S; gracz.cel = null; gracz.bron = 1; gracz.szybki = 0; gracz.tarcza = 0; gracz.cooldown = 0; gracz.vx = 0; gracz.bank = 0; gracz.lod = 0;
 }
 function start() {
   if (zaladowane < NAZWY.length) return;
@@ -922,11 +927,12 @@ const NAZWY_RUND = ['MORZE', 'PUSTYNIA', 'ZIMA', 'TWIERDZA'];
 const MNOZNIK = [1, 1.25, 1.5, 1.8]; // HP i szybkostrzelność wrogów w kolejnych rundach
 const hpSk = (b) => Math.max(1, Math.round(b * MNOZNIK[runda - 1]));
 const DOSTEP = [ // typ: [od którego poziomu, waga losowania]
-  { mysliwiec: [1, 10], zygzak: [4, 4], bombowiec: [7, 2.5] },
-  { mysliwiec: [1, 10], zygzak: [1, 4], bombowiec: [1, 2.5] },
-  { mysliwiec: [1, 10], zygzak: [1, 4], bombowiec: [1, 2.5] },
-  { mysliwiec: [1, 10], zygzak: [1, 4], bombowiec: [1, 2.5] },
+  { mysliwiec: [1, 10], kamikadze: [3, 3], zygzak: [4, 4], bombowiec: [7, 2.5] },
+  { mysliwiec: [1, 6], zygzak: [1, 4], kamikadze: [1, 2], bombowiec: [1, 2], smiglowiec: [2, 2.5] },
+  { mysliwiec: [1, 5], zygzak: [1, 4], kamikadze: [1, 2.5], bombowiec: [1, 2.5], smiglowiec: [1, 1.5], snajper: [2, 3] },
+  { mysliwiec: [1, 5], zygzak: [1, 4], kamikadze: [1, 2.5], bombowiec: [1, 2.5], smiglowiec: [1, 1.5], snajper: [2, 3] }, // tymczasowo, do czasu wież
 ];
+const PALETA_WROGOW = [null, { Hull: 0x9a8456, Accent: 0x3c5a2a }, { Hull: 0xe2eaf2, Accent: 0x2f6aa0 }, null]; // przemalowanie samolotów na motyw rundy
 const ELITA = new Set(['bombowiec', 'smiglowiec', 'snajper', 'bunkier']);
 let lvl = { faza: 'walka', zostalo: 0, ile: 0, odstep: 1, boss: false, final: false, zabitePoz: 0, bonusyPoz: 0, przecieki: 0, przerwa: 0 };
 
@@ -977,6 +983,35 @@ function wybierzTyp() {
 }
 
 // ---------- wrogowie ----------
+const SM_GEO = {
+  kadlub: new THREE.SphereGeometry(0.8, 10, 8), boom: new THREE.CylinderGeometry(0.16, 0.1, 2.3, 6).rotateX(Math.PI / 2), ster: new THREE.BoxGeometry(0.08, 0.8, 0.6),
+  stab: new THREE.BoxGeometry(1.0, 0.06, 0.4), skrzydlo: new THREE.BoxGeometry(3.0, 0.1, 0.6), gondola: new THREE.CylinderGeometry(0.16, 0.16, 0.9, 6).rotateX(Math.PI / 2),
+  maszt: new THREE.CylinderGeometry(0.06, 0.06, 0.3, 6), lopata: new THREE.BoxGeometry(3.8, 0.04, 0.16), tarcza: new THREE.CircleGeometry(1.9, 24).rotateX(-Math.PI / 2),
+};
+function zbudujSmiglowiec(kolKadlub, kolAkcent) { // dziób w stronę -z (jak modele GLB); wirnik w g.userData.wirnik
+  const g = new THREE.Group(), k = bryla(SM_GEO.kadlub, kolKadlub, 0, 0.5, 0); k.scale.set(0.85, 0.75, 1.45); g.add(k);
+  const kab = bryla(SM_GEO.kadlub, 0x1b2a3a, 0, 0.78, -0.75, { roughness: 0.2, metalness: 0.5 }); kab.scale.set(0.55, 0.45, 0.7); g.add(kab);
+  g.add(bryla(SM_GEO.boom, kolKadlub, 0, 0.55, 1.9));
+  g.add(bryla(SM_GEO.ster, kolAkcent, 0, 0.85, 3.0));
+  g.add(bryla(SM_GEO.stab, kolKadlub, 0, 0.6, 3.0));
+  g.add(bryla(SM_GEO.skrzydlo, kolAkcent, 0, 0.45, 0.1));
+  for (const sx of [-1.4, 1.4]) g.add(bryla(SM_GEO.gondola, 0x2a2a2a, sx, 0.35, -0.2));
+  const wirnik = new THREE.Group(); wirnik.position.y = 1.05;
+  wirnik.add(bryla(SM_GEO.maszt, 0x2a2a2a, 0, -0.1, 0));
+  for (const a of [0, Math.PI / 2]) { const l = bryla(SM_GEO.lopata, 0x222222, 0, 0, 0); l.rotation.y = a; wirnik.add(l); }
+  const tarcza = new THREE.Mesh(SM_GEO.tarcza, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1, depthWrite: false })); wirnik.add(tarcza);
+  g.add(wirnik); g.userData.wirnik = wirnik;
+  return g;
+}
+function modelWroga(typ) {
+  const pal = PALETA_WROGOW[runda - 1];
+  if (typ === 'smiglowiec') return runda === 3 ? zbudujSmiglowiec(0xe2eaf2, 0x2f6aa0) : zbudujSmiglowiec(0x8c7a4a, 0x3c5a2a);
+  const m = klonModelu(typ === 'kamikadze' ? 'enemy_zygzak' : typ === 'snajper' ? 'enemy_mysliwiec' : 'enemy_' + typ);
+  if (typ === 'kamikadze') przekolor(m, { Hull: 0x262626, Accent: 0xffd21a });
+  else if (typ === 'snajper') przekolor(m, { Hull: 0xcfeaff, Accent: 0x3ac8ff });
+  else if (pal) przekolor(m, pal);
+  return m;
+}
 function dodajWroga(typ) {
   if (zaladowane < NAZWY.length) return;
   const x = 50 * S + Math.random() * (W - 100 * S);
@@ -987,13 +1022,22 @@ function dodajWroga(typ) {
   } else if (typ === 'zygzak') {
     const hp = hpSk(2);
     w = { typ, x, x0: x, y: -60 * S, vy: (90 + 3 * trud) * S, hp, maxHp: hp, t: Math.random() * 6, amp: (40 + Math.random() * 50) * S, pkt: 120 };
+  } else if (typ === 'kamikadze') {
+    const hp = hpSk(1);
+    w = { typ, x, y: -50 * S, vy: 150 * S, hp, maxHp: hp, t: 0, pkt: 150, faza: 'wlot', yCel: losuj(0.08, 0.28) * H, kat: 0 };
+  } else if (typ === 'smiglowiec') {
+    const hp = hpSk(10 + Math.floor(poziom / 2));
+    w = { typ, x, x0: x, y: -90 * S, vy: 110 * S, hp, maxHp: hp, t: Math.random() * 6, pkt: 300, duzy: true, faza: 'wlot', yCel: losuj(0.14, 0.26) * H, czas: 7, strzal: 0.6, amp: 70 * S };
+  } else if (typ === 'snajper') {
+    const hp = hpSk(3);
+    w = { typ, x, y: -60 * S, vy: 0, hp, maxHp: hp, t: 0, pkt: 220, strzal: 1.0, przyg: 0 };
   } else {
     const hp = hpSk(1);
     w = { typ: 'mysliwiec', x, y: -60 * S, vy: (110 + 3 * trud) * S, hp, maxHp: hp, t: 0, pkt: 100,
       moze: trud >= 5 && Math.random() < Math.min(0.85, 0.15 + trud * 0.02), strzal: losuj(0.1, 0.8) };
   }
   w.r = ROZ_R[w.typ] * S;
-  w.obj = new THREE.Group(); const m = klonModelu('enemy_' + w.typ); m.rotation.y = Math.PI; m.rotation.order = 'YXZ'; w.obj.add(m); w.model = m;
+  w.obj = new THREE.Group(); const m = modelWroga(w.typ); m.rotation.y = Math.PI; m.rotation.order = 'YXZ'; w.obj.add(m); w.model = m; w.wirnik = m.userData.wirnik || null;
   scene.add(w.obj);
   wrogowie.push(w);
 }
@@ -1003,8 +1047,35 @@ function celuj(x, y, v, odchylka, extra) { // pocisk wroga wycelowany w gracza
   if (extra) Object.assign(p, extra);
   wrogiePociski.push(p); return p;
 }
+function ruchKamikadze(w, dt) {
+  if (w.faza === 'wlot') { w.y += w.vy * dt; if (w.y > w.yCel) { w.faza = 'celuje'; w.przyg = 0.6; w.przygKol = 0xff3030; } }
+  else if (w.faza === 'celuje') { // chwila namierzania, potem nurkowanie w miejsce, gdzie był gracz
+    w.kat = klamp(Math.atan2(gracz.x - w.x, gracz.y - w.y), -1.2, 1.2); w.przyg -= dt;
+    if (w.przyg <= 0) { const v = Math.min(480, 320 + trud * 4) * S; w.vx = Math.sin(w.kat) * v; w.vy = Math.cos(w.kat) * v; w.faza = 'nurkuje'; }
+  } else { w.x += w.vx * dt; w.y += w.vy * dt; }
+}
+function ruchSmiglowca(w, dt) {
+  if (w.faza === 'wlot') { w.y += w.vy * dt; if (w.y >= w.yCel) w.faza = 'zawis'; }
+  else if (w.faza === 'zawis') { // zawis w górnej części ekranu, wachlarz 3 pocisków
+    w.czas -= dt; w.x = klamp(w.x0 + Math.sin(w.t * 0.8) * w.amp, 40 * S, W - 40 * S);
+    w.strzal -= dt;
+    if (w.strzal <= 0) { w.strzal = 1.6 / MNOZNIK[runda - 1]; for (const o of [-0.22, 0, 0.22]) celuj(w.x, w.y + 24 * S, 200 * S * (1 + 0.05 * (runda - 1)), o); }
+    if (w.czas <= 0) w.faza = 'odlot';
+  } else w.y += w.vy * 1.3 * dt;
+}
+function ruchSnajpera(w, dt) { // wolno schodzi, śledzi gracza w poziomie, strzela wolnym pociskiem lodu po krótkim ostrzeżeniu
+  w.y += (w.y < H * 0.12 ? 80 : 38) * S * dt;
+  w.x = klamp(w.x + klamp(gracz.x - w.x, -1, 1) * 32 * S * dt, 30 * S, W - 30 * S);
+  if (w.y < H * 0.08) return;
+  if (w.przyg > 0) { w.przyg -= dt; if (w.przyg <= 0) celuj(w.x, w.y + 22 * S, 250 * S, 0, { lod: true, kol: '#7fdcff' }); }
+  else { w.strzal -= dt; if (w.strzal <= 0 && w.y < H * 0.7) { w.przyg = 0.5; w.przygKol = 0x66ddff; w.strzal = 2.4 / MNOZNIK[runda - 1]; } }
+}
 function ruchWroga(w, dt) {
-  w.t += dt; w.y += w.vy * dt;
+  w.t += dt;
+  if (w.typ === 'kamikadze') return ruchKamikadze(w, dt);
+  if (w.typ === 'smiglowiec') return ruchSmiglowca(w, dt);
+  if (w.typ === 'snajper') return ruchSnajpera(w, dt);
+  w.y += w.vy * dt;
   if (w.typ === 'zygzak') w.x = w.x0 + Math.sin(w.t * 2.6) * w.amp;
   else if (w.typ === 'bombowiec') {
     w.strzal -= dt;
@@ -1028,6 +1099,11 @@ function trafienieGracza() {
   if (gracz.niezniszczalny > 0 || gracz.tarcza > 0) return;
   gracz.bron = Math.max(1, gracz.bron - 1); gracz.szybki = 0; gracz.niezniszczalny = 1.2;
   strataZycia();
+}
+function trafLodem() { // pocisk lodowy: spowolnienie na 2,5 s; kolejny trafiony w trakcie = zwykłe trafienie
+  if (gracz.niezniszczalny > 0 || gracz.tarcza > 0) return;
+  if (gracz.lod > 0) { trafienieGracza(); return; }
+  gracz.lod = 2.5; komunikat('ZAMARZNIĘTY!'); dzw.lod();
 }
 function strataZycia() {
   zycia--; pokazZycia(); dzw.gracz();
@@ -1125,7 +1201,7 @@ function trafWroga(w, dmg, cichy) {
 
 function strzel() {
   const b = BRONIE[gracz.bron - 1];
-  gracz.cooldown = profil.cd * b.cd * (gracz.szybki > 0 ? 0.55 : 1);
+  gracz.cooldown = profil.cd * b.cd * (gracz.szybki > 0 ? 0.55 : 1) * (gracz.lod > 0 ? 1.4 : 1);
   const v = 640 * S;
   for (const l of b.lufy) {
     const a = l.a || 0;
@@ -1149,7 +1225,8 @@ function krok(dt) {
   if (stan !== 'gra') return;
 
   // ruch gracza
-  const v = profil.v * S, px0 = gracz.x;
+  gracz.lod = Math.max(0, gracz.lod - dt);
+  const mz = gracz.lod > 0 ? 0.45 : 1, v = profil.v * S * mz, px0 = gracz.x;
   let dx = 0, dy = 0;
   if (klawisze['arrowleft'] || klawisze['a']) dx -= 1;
   if (klawisze['arrowright'] || klawisze['d']) dx += 1;
@@ -1157,8 +1234,8 @@ function krok(dt) {
   if (klawisze['arrowdown'] || klawisze['s']) dy += 1;
   if (dx || dy) { gracz.x += dx * v * dt; gracz.y += dy * v * dt; gracz.cel = null; }
   else if (gracz.cel) {
-    gracz.x += (gracz.cel.x - gracz.x) * Math.min(1, dt * 14);
-    gracz.y += (gracz.cel.y - gracz.y) * Math.min(1, dt * 14);
+    gracz.x += (gracz.cel.x - gracz.x) * Math.min(1, dt * 14 * mz);
+    gracz.y += (gracz.cel.y - gracz.y) * Math.min(1, dt * 14 * mz);
   }
   gracz.x = klamp(gracz.x, 30 * S, W - 30 * S);
   gracz.y = klamp(gracz.y, H * 0.3, H - 60 * S);
@@ -1187,7 +1264,7 @@ function krok(dt) {
       trafienieGracza();
     }
   }
-  for (const w of wrogowie) if (!w.zniszczony && w.y - w.r > H + 60 * S) { w.zniszczony = true; if (!w.naziemny && !w.boss) przeciek(); }
+  for (const w of wrogowie) if (!w.zniszczony && (w.y - w.r > H + 60 * S || w.x < -140 * S || w.x > W + 140 * S || w.y < -400 * S)) { w.zniszczony = true; if (!w.naziemny && !w.boss && w.y > H * 0.5) przeciek(); }
   for (const w of wrogowie) if (w.zniszczony) usun(w.obj);
   wrogowie = wrogowie.filter((w) => !w.zniszczony);
   if (stan !== 'gra') return;
@@ -1196,7 +1273,7 @@ function krok(dt) {
 
   for (const p of wrogiePociski) {
     p.x += p.vx * dt; p.y += p.vy * dt;
-    if (kolizja(p, gracz, 4 * S, (profil.r - 1) * S)) { p.zuzyty = true; trafienieGracza(); }
+    if (kolizja(p, gracz, 4 * S, (profil.r - 1) * S)) { p.zuzyty = true; if (p.lod) trafLodem(); else trafienieGracza(); }
   }
   wrogiePociski = wrogiePociski.filter((p) => !p.zuzyty && p.y < H + 20 && p.y > -20 && p.x > -20 && p.x < W + 20);
 
@@ -1216,6 +1293,7 @@ const pociskGeo = new THREE.BoxGeometry(0.05, 0.05, 0.5);
 const pociskMat = {};
 const wrogPociskGeo = new THREE.SphereGeometry(0.22, 10, 8);
 const wrogPociskMat = new THREE.MeshBasicMaterial({ color: 0xff7a6b });
+const wpMaty = {}, wpMat = (kol) => wpMaty[kol] || (wpMaty[kol] = new THREE.MeshBasicMaterial({ color: new THREE.Color(kol) }));
 const pulaP = [], pulaWP = [];
 function sync(pula, dane, mk, upd) {
   while (pula.length < dane.length) { const m = mk(); scene.add(m); pula.push(m); }
@@ -1251,6 +1329,7 @@ function render3D(dt) {
     gm.model.rotation.y = -gracz.bank * 0.18;
     gm.model.rotation.x = Math.sin(czas * 2.2) * 0.02;
     for (const f of gm.plomienie) { f.scale.set(1, 1, 0.7 + Math.random() * 0.7); f.position.z = 2.75 + 0.5 * f.scale.z; }
+    const lodTeraz = gracz.lod > 0; if (lodTeraz !== gm.lod) { swiecenie(gm.model, lodTeraz ? 0x66ddff : 0x000000, lodTeraz ? 0.6 : 0); gm.lod = lodTeraz; }
     gm.tarcza.visible = gracz.tarcza > 0 && (gracz.tarcza > 2 || Math.floor(performance.now() / 120) % 2 === 0);
     if (gm.tarcza.visible) gm.tarcza.scale.setScalar(1 + Math.sin(czas * 7) * 0.04);
   }
@@ -1259,11 +1338,15 @@ function render3D(dt) {
   for (const w of wrogowie) {
     const p = ground(w.x, w.y, ALT);
     w.obj.position.set(p.x, ALT, p.z);
-    w.obj.scale.setScalar(PX_NA_JEDN['enemy_' + w.typ] * S * K0);
+    w.obj.scale.setScalar(PX_ENEMY[w.typ] * S * K0);
     let roll = 0;
     if (w.typ === 'zygzak') roll = Math.cos(w.t * 2.6) * 0.6; else if (w.typ === 'mysliwiec') roll = Math.sin(w.t * 1.5) * 0.08;
     w.model.rotation.z = roll;
-    if (w.trafiony > 0) swiecenie(w.obj, 0xffffff, 0.9); else if (zamroz > 0) swiecenie(w.obj, 0x66ddff, 0.5); else swiecenie(w.obj, 0x000000, 0);
+    if (w.typ === 'kamikadze') w.obj.rotation.y = w.kat;
+    if (w.wirnik) w.wirnik.rotation.y = czas * 25;
+    if (w.trafiony > 0) swiecenie(w.obj, 0xffffff, 0.9);
+    else if (w.przyg > 0 && Math.floor(czas * 14) % 2) swiecenie(w.obj, w.przygKol, 0.9);
+    else if (zamroz > 0) swiecenie(w.obj, 0x66ddff, 0.5); else swiecenie(w.obj, 0x000000, 0);
   }
 
   // pociski
@@ -1273,7 +1356,7 @@ function render3D(dt) {
     const sk = p.gruby ? 1.5 : 1; m.scale.set(sk * S, sk * S, S);
     m.material = pociskMat[p.kol] || (pociskMat[p.kol] = new THREE.MeshBasicMaterial({ color: new THREE.Color(p.kol) }));
   });
-  sync(pulaWP, wrogiePociski, () => new THREE.Mesh(wrogPociskGeo, wrogPociskMat), (m, p) => { const q = ground(p.x, p.y, ALT); m.position.set(q.x, ALT, q.z); m.scale.setScalar(S); });
+  sync(pulaWP, wrogiePociski, () => new THREE.Mesh(wrogPociskGeo, wrogPociskMat), (m, p) => { const q = ground(p.x, p.y, ALT); m.position.set(q.x, ALT, q.z); m.scale.setScalar(S * (p.lod ? 1.35 : 1)); m.material = p.kol ? wpMat(p.kol) : wrogPociskMat; });
 
   // bonusy
   for (const b of bonusy) {
