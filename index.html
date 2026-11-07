@@ -733,6 +733,18 @@ const dzw = {
   klik() { ton(700, 950, 0.05, 'square', 0.08); },
   poziom() { [659, 880].forEach((f, i) => ton(f, f, 0.12, 'square', 0.09, teraz(i * 0.09))); },
   alarm() { ton(220, 150, 0.22, 'sawtooth', 0.14); },
+  laserLadowanie(dur) { ton(180, 1500, dur, 'sawtooth', 0.09); ton(90, 750, dur, 'square', 0.05); szum(dur, 0.06, 1500, 6000, 'bandpass'); }, // narastający pisk przed laserem
+  laser(dur) { // wiązka lasera: niskie buczenie z drżeniem, wyższa harmoniczna i syk, z szybkim wejściem i wyciszeniem na końcu
+    const c = audio.ctx; if (!c) return;
+    const t = c.currentTime, o = c.createOscillator(), o2 = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(115, t); o.frequency.linearRampToValueAtTime(85, t + dur);
+    o2.type = 'square'; o2.frequency.setValueAtTime(232, t); o2.frequency.linearRampToValueAtTime(170, t + dur);
+    lfo.frequency.value = 13; lg.gain.value = 16; lfo.connect(lg); lg.connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.2, t + 0.05); g.gain.setValueAtTime(0.2, t + Math.max(0.06, dur - 0.3)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); o2.connect(g); g.connect(audio.sfx);
+    for (const x of [o, o2, lfo]) { x.start(t); x.stop(t + dur + 0.05); }
+    szum(dur, 0.1, 4200, 2600, 'bandpass'); ton(1300, 300, 0.25, 'sawtooth', 0.12);
+  },
   oberwal() { ton(160, 80, 0.14, 'sawtooth', 0.16); szum(0.08, 0.2, 2500, 400, 'lowpass'); },
   lod() { ton(1800, 600, 0.25, 'triangle', 0.12); szum(0.18, 0.2, 7000, 2500, 'highpass'); },
 };
@@ -1284,11 +1296,20 @@ function ruchWiezy(w, dt) { // wieża stoi na podłożu: przesuwa się z tłem
   if (w.strzal <= 0 && w.y > 10 * S && w.y < H * 0.82) { w.strzal = WIEZE_DANE[w.typ].int / og() * losuj(0.85, 1.15); strzalWiezy(w); }
 }
 // ---------- bossowie: każdy ma własną mechanikę (opis w BOSS_DANE, podpowiedź na pasku bossa w bossInfo) ----------
-const CZ_GEO = new THREE.SphereGeometry(1, 12, 8);
+const CZ_GEO = new THREE.SphereGeometry(1, 12, 8), TARCZA_GEO = new THREE.SphereGeometry(1, 28, 18);
+const TARCZA_WIRE_GEO = new THREE.SphereGeometry(1, 14, 10);
+const TARCZA_KOL = [[0xff9a30, 0xb85200], [0, 0], [0x38c6ff, 0x0a5fb8], [0xb060ff, 0x5a1fb0]]; // [wypełnienie, siatka] tarczy bossa: Admirał (pancerz), —, Lewiatan (lód), Cytadela (generatory)
 const czescZywe = (w) => w.czesci.filter((c) => c.hp > 0);
 const bossProst = (w, x, y, r, sk) => Math.abs(x - w.x) < w.hw * (sk || 1) + r && Math.abs(y - w.y) < w.hh * (sk || 1) + r; // prostokątny korpus bossa
 const bossX = (w, a, om) => klamp(W / 2 + Math.sin(w.t * om) * W * a, w.hw + 12 * S, W - w.hw - 12 * S);
 function dodajCzesciBossa(w) { // części bossa (działa, generatory) jako osobne cele z własnym HP i widocznym znacznikiem
+  if (w.wariant !== 1) { // tarcza pochłaniająca pociski: widoczna, gdy boss jest opancerzony (pancerz < 100%)
+    const mk = (geo, kol, wire) => new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: kol, transparent: true, opacity: 0, depthWrite: false, wireframe: wire, fog: false })); // zwykłe mieszanie: widoczne także na jasnym śniegu
+    const t = new THREE.Group(); t.add(mk(TARCZA_GEO, TARCZA_KOL[w.wariant][0], false), mk(TARCZA_WIRE_GEO, TARCZA_KOL[w.wariant][1], true));
+    t.scale.set(w.hw / S / w.px * 1.25, Math.max(w.hw, w.hh) / S / w.px * 0.55, w.hh / S / w.px * 1.25); t.position.y = w.naziemny ? 0.6 : 0.2; t.renderOrder = 4; t.visible = false;
+    for (const m of t.children) m.renderOrder = 4;
+    w.obj.add(t); w.tarcza = t; w.tOp = 0; w.tFlash = 0;
+  }
   w.czesci = BOSS_DANE[w.wariant].czesci.map((c, i) => {
     const hp = Math.max(1, Math.round(c.hp * TR.bossHp));
     const m = new THREE.Mesh(CZ_GEO, new THREE.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.8, depthWrite: false, fog: false }));
@@ -1313,6 +1334,7 @@ function trafBossa(w, dmg, p) {
   const m = w.pancerz * (w.mnoz || 1);
   if (m <= 0) { // pancerz: pocisk odbity
     if (p) wybuch(p.x, p.y, 0.25 * S);
+    w.tFlash = 0.22; // tarcza błyska przy trafieniu
     if (w.pkomT <= 0) { komunikat(w.wariant === 2 ? 'PANCERZ ZAMKNIĘTY!' : 'NIEZRANIALNY!'); w.pkomT = 1.2; }
     return;
   }
@@ -1352,7 +1374,7 @@ function bossGunship(w, dt, og0) { // patrol -> ostrzeżenie (czerwony pas) -> s
   w.pancerz = 1; w.mnoz = 1; w.fazaT -= dt;
   const pas = (a) => w.zn.push({ x: w.x, y: w.y + (H - w.y) / 2, dl: H - w.y + 60 * S, sz: w.hw * 2, kat: Math.PI / 2, tryb: 'ostrz', a });
   if (w.faza === 'patrol') {
-    w.x = bossX(w, 0.3, 0.7); w.y += (w.yCel - w.y) * Math.min(1, dt * 3);
+    w.x += (bossX(w, 0.3, 0.7) - w.x) * Math.min(1, dt * 3); w.y += (w.yCel - w.y) * Math.min(1, dt * 3); // płynnie po powrocie z szarży
     w.strzal -= dt * og0;
     if (w.strzal <= 0) {
       if (++w.cykl % 2) { for (let i = -2; i <= 2; i++) kula(w.x, w.y + 40 * S, Math.PI / 2 + i * 0.28, 200 * S, { dmg: DMG.pocisk }); w.strzal = 1.3; }
@@ -1376,7 +1398,7 @@ function bossLewiatan(w, dt, og0) { // pancerz zamknięty (nietykalny) <-> otwar
   w.mnoz = 1; w.fazaT -= dt;
   const pierscien = (v) => { const f0 = Math.random() * 6.28; for (let i = 0; i < 14; i++) if (i % 5 !== 0) kula(w.x, w.y + 30 * S, f0 + i / 14 * Math.PI * 2, v * S, { dmg: DMG.filler }); };
   if (w.faza === 'zamkniety') {
-    w.pancerz = 0; w.x = bossX(w, 0.22, 0.45);
+    w.pancerz = 0; w.x += (bossX(w, 0.22, 0.45) - w.x) * Math.min(1, dt * 2.5); // płynny powrót do patrolu po fazie otwartej (bez skoku)
     w.strzal -= dt * og0;
     if (w.strzal <= 0) { celuj(w.x, w.y + 40 * S, 230 * S, 0, { lod: true, kol: '#00626e', dmg: DMG.lod }); w.strzal = 1.7; }
     if (w.fazaT < 0.9 && !w.zapowiedz) { w.zapowiedz = true; w.przyg = 0.9; w.przygKol = 0x66ddff; komunikat('PANCERZ SIĘ OTWIERA!'); dzw.alarm(); }
@@ -1390,10 +1412,10 @@ function laserCytadeli(w, dt) { // obrotowa wiązka: cienka linia ostrzega, pote
   const L = w.laser; L.t -= dt;
   const dl = H * 1.5, lin = (kat, sz, tryb, a) => ({ x: w.x + Math.cos(kat) * dl / 2, y: w.y + Math.sin(kat) * dl / 2, dl, sz, kat, tryb, a });
   if (L.faza === 'przerwa') {
-    if (L.t <= 0) { L.faza = 'ostrz'; L.t = 1.4 * TR.ostrz; L.kat = klamp(Math.atan2(gracz.y - w.y, gracz.x - w.x), 0.4, Math.PI - 0.4); L.dir = Math.random() < 0.5 ? -1 : 1; komunikat('LASER — WYJDŹ Z TORU!'); dzw.alarm(); }
+    if (L.t <= 0) { L.faza = 'ostrz'; L.t = 1.4 * TR.ostrz; L.kat = klamp(Math.atan2(gracz.y - w.y, gracz.x - w.x), 0.4, Math.PI - 0.4); L.dir = Math.random() < 0.5 ? -1 : 1; komunikat('LASER — WYJDŹ Z TORU!'); dzw.alarm(); dzw.laserLadowanie(L.t); }
   } else if (L.faza === 'ostrz') {
     w.zn.push(lin(L.kat, 3 * S, 'ostrz', 0.5 + 0.4 * Math.sin(w.t * 30)));
-    if (L.t <= 0) { L.faza = 'wiazka'; L.t = 2.8; dzw.blyskawica(); }
+    if (L.t <= 0) { L.faza = 'wiazka'; L.t = 2.8; dzw.laser(L.t); }
   } else {
     L.kat += L.dir * 0.5 * dt; if (L.kat < 0.4 || L.kat > Math.PI - 0.4) { L.dir = -L.dir; L.kat = klamp(L.kat, 0.4, Math.PI - 0.4); }
     w.zn.push(lin(L.kat, 26 * S, 'wiazka', 0.9));
@@ -1748,6 +1770,12 @@ function render3D(dt) {
     else if (w.boss && w.dock && w.wariant === 2) swiecenie(w.obj, w.faza === 'otwarty' ? 0x33ddff : 0x1a3a66, w.faza === 'otwarty' ? 0.5 + 0.4 * Math.sin(czas * 8) : 0.35);
     else if (w.boss && w.faza === 'powrot') swiecenie(w.obj, 0xff3a0a, 0.28 + 0.15 * Math.sin(czas * 10));
     else if (zamroz > 0 && !w.boss) swiecenie(w.obj, 0x66ddff, 0.5); else swiecenie(w.obj, 0x000000, 0);
+    if (w.tarcza) { // tarcza: im mniejszy pancerz bossa, tym wyraźniejsza; błysk, gdy pochłania pocisk
+      w.tFlash = Math.max(0, w.tFlash - dt);
+      const cel = w.dock ? (1 - w.pancerz) * 0.5 + (w.pancerz < 1 ? 0.12 : 0) + (w.tFlash > 0 ? 0.35 : 0) : 0;
+      w.tOp += (cel - w.tOp) * Math.min(1, dt * 10); w.tarcza.visible = w.tOp > 0.01;
+      const pulsy = 0.85 + 0.15 * Math.sin(czas * 9); w.tarcza.children[0].material.opacity = Math.min(0.5, w.tOp * 0.7 * pulsy); w.tarcza.children[1].material.opacity = Math.min(1, w.tOp * 2.2); w.tarcza.rotation.y = czas * 0.6;
+    }
     if (w.czesci) for (const c of w.czesci) if (c.hp > 0) { c.mesh.material.opacity = 0.55 + 0.3 * Math.sin(czas * 6); c.mesh.material.color.setHex(c.trafiony > 0 ? 0xffffff : 0xff7a1a); }
   }
 
