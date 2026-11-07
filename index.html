@@ -53,6 +53,15 @@
   .panel .wart { font-family: var(--font-tytul); font-size: 30px; font-variant-numeric: tabular-nums; line-height: 1.05; }
   .panel .prawo { text-align: right; align-items: flex-end; }
   .zycia { font-size: 24px; letter-spacing: 0.15em; color: var(--akcent); }
+  .przecieki { font-size: 13px; letter-spacing: 0.12em; color: var(--tekst-cichy); }
+  .przecieki.grozi { color: #ff7a6b; }
+  .boss { position: absolute; left: 50%; transform: translateX(-50%); top: 134px; width: min(60%, 360px); text-align: center; pointer-events: none; font-family: var(--font-tytul); font-size: 14px; letter-spacing: .08em; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
+  .boss .pasek-boss { height: 10px; margin-top: 3px; background: rgba(255,255,255,.2); border-radius: 5px; overflow: hidden; border: 1px solid rgba(0,0,0,.4); }
+  .boss .pasek-boss i { display: block; height: 100%; background: #e0483c; }
+  @media (min-width: 761px) { .boss { top: 92px; } }
+  .alarm { position: absolute; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 110px 26px rgba(255, 40, 30, .7); }
+  .alarm.pokaz { animation: alarm .55s ease both; }
+  @keyframes alarm { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
   .narzedzia { position: absolute; right: 20px; top: 84px; display: flex; gap: 8px; }
   .narzedzia button {
     width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35);
@@ -136,7 +145,7 @@
   <div class="legenda" aria-label="Skróty klawiszowe"><span><kbd>M</kbd>muzyka wł./wył.</span><span><kbd>Esc</kbd>/<kbd>P</kbd>pauza</span><span><kbd>F</kbd>pełny ekran</span><span><kbd>WASD</kbd>/<kbd>←↑↓→</kbd>/mysz ruch</span></div>
   <div class="panel">
     <div class="blok"><span class="etyk">Punkty</span><span class="wart" id="punkty">0</span></div>
-    <div class="blok prawo"><span class="etyk">Runda <span id="fala">1</span> · Rekord <span id="rekord">0</span></span><span class="zycia" id="zycia" aria-label="Życia">▲▲▲</span></div>
+    <div class="blok prawo"><span class="etyk">Runda <span id="fala">1</span> · Poz. <span id="poziom">1</span>/10 · Rekord <span id="rekord">0</span></span><span class="zycia" id="zycia" aria-label="Życia">▲▲▲</span><span class="przecieki" id="przecieki" aria-label="Przecieki"></span></div>
   </div>
   <div class="hud-bronie" id="hud-bronie" hidden>
     <div class="hud-bron"><span id="hud-bron-nazwa">BLASTER</span><span id="hud-pips"></span></div>
@@ -149,14 +158,16 @@
     <button type="button" id="btn-pelny" title="Pełny ekran (F)" aria-label="Pełny ekran">⛶</button>
     <button type="button" id="btn-pauza-hud" title="Pauza (Esc)" aria-label="Pauza">II</button>
   </div>
+  <div class="boss" id="boss" hidden><span id="boss-nazwa">BOSS</span><div class="pasek-boss"><i id="boss-pasek" style="width:100%"></i></div></div>
   <div class="blysk" id="blysk"></div>
+  <div class="alarm" id="alarm"></div>
   <div class="baner" id="baner" aria-live="polite"></div>
   <div class="komunikat" id="komunikat" aria-live="polite"></div>
 
   <div class="nakladka" id="ekran-menu">
     <div class="karta">
       <h1>Eskadra Świt<small>3D</small></h1>
-      <p>Bronisz wybrzeża. Zestrzel wrogie samoloty, zanim przelecą.</p>
+      <p>Bronisz wybrzeża przez 4 rundy po 10 poziomów. Zestrzel wrogów, zanim przelecą.</p>
       <h2>Wybierz samolot</h2>
       <div class="wybor" id="wybor" role="radiogroup" aria-label="Wybór samolotu"></div>
       <div class="sterowanie">
@@ -202,7 +213,7 @@ import * as THREE from './vendor/three.module.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 
 const el = (id) => document.getElementById(id);
-const ePunkty = el('punkty'), eFala = el('fala'), eRekord = el('rekord'), eZycia = el('zycia');
+const ePunkty = el('punkty'), eFala = el('fala'), ePoziom = el('poziom'), eRekord = el('rekord'), eZycia = el('zycia'), ePrzecieki = el('przecieki');
 const ekrany = { menu: el('ekran-menu'), pauza: el('ekran-pauza'), koniec: el('ekran-koniec') };
 const ruchOgr = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const losuj = (a, b) => a + Math.random() * (b - a);
@@ -520,6 +531,8 @@ const dzw = {
   runda() { [523, 659, 784, 1047].forEach((f, i) => ton(f, f, 0.2, 'square', 0.11, teraz(i * 0.12))); },
   koniec() { [440, 370, 311, 220].forEach((f, i) => ton(f, f * 0.97, 0.3, 'sawtooth', 0.14, teraz(i * 0.2))); },
   klik() { ton(700, 950, 0.05, 'square', 0.08); },
+  poziom() { [659, 880].forEach((f, i) => ton(f, f, 0.12, 'square', 0.09, teraz(i * 0.09))); },
+  alarm() { ton(220, 150, 0.22, 'sawtooth', 0.14); },
 };
 
 // ---- muzyka bojowa: szybki arpeggiator (C64), tnący bas, dynamiczna perkusja, lead "supersaw" z pompowaniem ----
@@ -550,7 +563,7 @@ function muzykaPlan() {
   const c = audio.ctx; if (!c) return;
   if (!ust.muzyka || stan === 'koniec') { mNast = Math.max(mNast, c.currentTime + 0.05); return; }
   if (mNast < c.currentTime - 0.2) mNast = c.currentTime + 0.05;
-  const bpm = 150 + Math.min(fala - 1, 8) * 3, dl = 60 / bpm / 4;
+  const bpm = 150 + Math.min(trud - 1, 39) * 0.75, dl = 60 / bpm / 4;
   while (mNast < c.currentTime + 0.25) { nutaMuz(mKrok, mNast, dl); mNast += dl; mKrok = (mKrok + 1) % 128; }
 }
 function pulsOsc(f, dur, vol, t, fala_, dest) {
@@ -605,12 +618,12 @@ function przelaczMuzyke() { audioInit(); ust.muzyka = !ust.muzyka; zapiszUst(); 
 // LOGIKA GRY (w pikselach ekranu; render 3D mapuje piksele -> świat)
 // ============================================================
 let stan = 'menu'; // menu | gra | pauza | koniec
-let punkty = 0, fala = 1, zycia = 3, zabite = 0, rekord = 0;
+let punkty = 0, runda = 1, poziom = 1, trud = 1, zycia = 3, zabite = 0, rekord = 0;
 try { rekord = parseInt(localStorage.getItem('eskadra-swit-3d-rekord') || '0', 10) || 0; } catch (e) {}
 eRekord.textContent = rekord;
 const gracz = { x: 0, y: 0, vx: 0, cel: null, cooldown: 0, bron: 1, szybki: 0, tarcza: 0, niezniszczalny: 0, bank: 0 };
 let pociski = [], wrogowie = [], wrogiePociski = [], wybuchy = [], bonusy = [];
-let blysk = 0, zamroz = 0, doWroga = 0;
+let blysk = 0, zamroz = 0, doWroga = 0, bonusCd = 0;
 const klawisze = {};
 
 const BRONIE = [
@@ -649,18 +662,20 @@ function wyczyscSwiat() {
   for (const w of wrogowie) usun(w.obj);
   for (const b of bonusy) { scene.remove(b.spr); scene.remove(b.glow); }
   pociski = []; wrogowie = []; wrogiePociski = []; wybuchy = []; bonusy = [];
-  blysk = 0; zamroz = 0;
+  blysk = 0; zamroz = 0; el('boss').hidden = true;
   gracz.x = W / 2; gracz.y = H - 100 * S; gracz.cel = null; gracz.bron = 1; gracz.szybki = 0; gracz.tarcza = 0; gracz.cooldown = 0; gracz.vx = 0; gracz.bank = 0;
 }
 function start() {
   if (zaladowane < NAZWY.length) return;
   audioInit(); profil = PROFILE[ust.samolot];
   stan = 'gra'; document.body.classList.add('gra');
-  punkty = 0; fala = 1; zycia = 3; zabite = 0; wyczyscSwiat();
-  gracz.niezniszczalny = 1.5; doWroga = 2.2;
+  punkty = 0; runda = 1; poziom = 1; zycia = 3; zabite = 0; bonusCd = 0; wyczyscSwiat();
+  zmienMotyw(0, true);
+  gracz.niezniszczalny = 1.5;
   ePunkty.textContent = '0'; eFala.textContent = '1'; pokazZycia();
   pokazEkran(null); el('narzedzia').hidden = false; el('hud-bronie').hidden = false;
-  baner('RUNDA 1', 'Powodzenia, pilocie'); dzw.runda();
+  rozpocznijPoziom(true);
+  baner('RUNDA 1', NAZWY_RUND[0]); dzw.runda();
 }
 function doMenu() {
   stan = 'menu'; document.body.classList.remove('gra'); wyczyscSwiat();
@@ -675,12 +690,14 @@ function wznow() {
   stan = 'gra'; document.body.classList.add('gra'); pokazEkran(null); ostatni = performance.now();
   for (const k in klawisze) klawisze[k] = false;
 }
-function koniec() {
-  stan = 'koniec'; document.body.classList.remove('gra'); el('narzedzia').hidden = true; el('hud-bronie').hidden = true; dzw.koniec();
+function koniec(wygrana) {
+  stan = 'koniec'; document.body.classList.remove('gra'); el('narzedzia').hidden = true; el('hud-bronie').hidden = true; el('boss').hidden = true; dzw.koniec();
+  if (wygrana) punkty += zycia * 500;
   const nowy = punkty > rekord;
   if (nowy) { rekord = punkty; try { localStorage.setItem('eskadra-swit-3d-rekord', String(rekord)); } catch (e) {} eRekord.textContent = rekord; }
+  el('koniec-tytul').textContent = wygrana ? 'Zwycięstwo!' : 'Misja zakończona';
   el('koniec-punkty').textContent = punkty;
-  el('koniec-opis').textContent = 'punktów · runda ' + fala + (nowy && punkty > 0 ? ' · nowy rekord!' : '');
+  el('koniec-opis').textContent = 'punktów · ' + (wygrana ? 'wszystkie 4 rundy ukończone (+' + zycia * 500 + ' za życia)' : 'runda ' + runda + ' · poziom ' + Math.max(1, poziom)) + (nowy && punkty > 0 ? ' · nowy rekord!' : '');
   pokazEkran('koniec'); el('btn-znowu').focus({ preventScroll: true });
 }
 function pelnyEkran() {
@@ -753,24 +770,107 @@ addEventListener('keydown', (e) => {
 });
 addEventListener('keyup', (e) => { klawisze[e.key.toLowerCase()] = false; });
 
+// ---------- rundy i poziomy ----------
+const RUNDY_N = 4, POZ_N = 10, ZYCIA_MAX = 5, PRZECIEKI_MAX = 5;
+const NAZWY_RUND = ['MORZE', 'PUSTYNIA', 'ZIMA', 'TWIERDZA'];
+const MNOZNIK = [1, 1.25, 1.5, 1.8]; // HP i szybkostrzelność wrogów w kolejnych rundach
+const hpSk = (b) => Math.max(1, Math.round(b * MNOZNIK[runda - 1]));
+const DOSTEP = [ // typ: [od którego poziomu, waga losowania]
+  { mysliwiec: [1, 10], zygzak: [4, 4], bombowiec: [7, 2.5] },
+  { mysliwiec: [1, 10], zygzak: [1, 4], bombowiec: [1, 2.5] },
+  { mysliwiec: [1, 10], zygzak: [1, 4], bombowiec: [1, 2.5] },
+  { mysliwiec: [1, 10], zygzak: [1, 4], bombowiec: [1, 2.5] },
+];
+const ELITA = new Set(['bombowiec', 'smiglowiec', 'snajper', 'bunkier']);
+let lvl = { faza: 'walka', zostalo: 0, ile: 0, odstep: 1, boss: false, final: false, zabitePoz: 0, bonusyPoz: 0, przecieki: 0, przerwa: 0 };
+
+function zmienMotyw() {}
+function pokazPoziom() { ePoziom.textContent = Math.max(1, poziom); }
+function pokazPrzecieki() {
+  const n = lvl.przecieki; ePrzecieki.hidden = runda === RUNDY_N;
+  ePrzecieki.textContent = 'PRZECIEKI ' + '●'.repeat(n) + '○'.repeat(PRZECIEKI_MAX - n);
+  ePrzecieki.classList.toggle('grozi', n >= PRZECIEKI_MAX - 1);
+}
+function planPoziomu() {
+  const boss = false; // bossowie dochodzą w kolejnym kroku
+  const wieze = runda === RUNDY_N;
+  const ile = wieze ? 10 + 2 * poziom : 12 + 2 * poziom + 6 * (runda - 1);
+  const odstep = wieze ? Math.max(0.8, 1.7 - 0.07 * poziom) : Math.max(0.35, (1.3 - 0.045 * poziom) / (1 + 0.12 * (runda - 1)));
+  return { ile, odstep, boss };
+}
+function rozpocznijPoziom(cicho) {
+  trud = (runda - 1) * POZ_N + poziom;
+  const pl = planPoziomu();
+  lvl = { faza: 'walka', zostalo: pl.ile, ile: pl.ile, odstep: pl.odstep, boss: pl.boss, final: false, zabitePoz: 0, bonusyPoz: 0, przecieki: 0, przerwa: 0 };
+  doWroga = 1.4; wrogiePociski = [];
+  pokazPoziom(); pokazPrzecieki();
+  if (!cicho) komunikat('POZIOM ' + poziom + ' / ' + POZ_N);
+}
+function ukonczPoziom() {
+  lvl.faza = 'przerwa';
+  const premia = lvl.przecieki === 0 ? 100 * runda : 0;
+  if (premia) { punkty += premia; ePunkty.textContent = punkty; }
+  if (poziom < POZ_N) {
+    lvl.przerwa = 1.5; komunikat('POZIOM ' + poziom + ' UKOŃCZONY' + (premia ? ' · BEZ PRZECIEKÓW +' + premia : '')); dzw.poziom();
+  } else if (runda < RUNDY_N) {
+    lvl.przerwa = 3.4; runda++; poziom = 0; trud = (runda - 1) * POZ_N + 1;
+    if (zycia < 3) { zycia = 3; pokazZycia(); }
+    eFala.textContent = runda; pokazPoziom();
+    baner('RUNDA ' + runda, NAZWY_RUND[runda - 1]); dzw.runda();
+    zmienMotyw(runda - 1);
+  } else {
+    lvl.przerwa = 2.4; lvl.final = true; baner('ZWYCIĘSTWO', 'Wybrzeże uratowane'); dzw.runda();
+  }
+}
+function nastepnyPoziom() { poziom++; rozpocznijPoziom(); }
+function wybierzTyp() {
+  const d = DOSTEP[runda - 1], lista = []; let suma = 0;
+  for (const k in d) if (poziom >= d[k][0]) { lista.push([k, d[k][1]]); suma += d[k][1]; }
+  let r = Math.random() * suma;
+  for (const [k, wg] of lista) { r -= wg; if (r <= 0) return k; }
+  return lista[0][0];
+}
+
 // ---------- wrogowie ----------
-function dodajWroga() {
+function dodajWroga(typ) {
   if (zaladowane < NAZWY.length) return;
-  const r = Math.random(), tr = Math.min(fala, 12);
   const x = 50 * S + Math.random() * (W - 100 * S);
   let w;
-  if (fala >= 3 && r < 0.12 + tr * 0.01) {
-    const hp = 6 + Math.floor(fala / 2);
-    w = { typ: 'bombowiec', x, y: -110 * S, vy: (45 + tr * 4) * S, hp, maxHp: hp, strzal: 1.2, t: 0, pkt: 250 };
-  } else if (fala >= 2 && r < 0.45) {
-    w = { typ: 'zygzak', x, x0: x, y: -60 * S, vy: (95 + tr * 8) * S, hp: 2, maxHp: 2, t: Math.random() * 6, amp: (40 + Math.random() * 50) * S, pkt: 120 };
+  if (typ === 'bombowiec') {
+    const hp = hpSk(6 + Math.floor(poziom / 2));
+    w = { typ, x, y: -110 * S, vy: (45 + 1.5 * trud) * S, hp, maxHp: hp, strzal: 1.2, t: 0, pkt: 250, duzy: true };
+  } else if (typ === 'zygzak') {
+    const hp = hpSk(2);
+    w = { typ, x, x0: x, y: -60 * S, vy: (90 + 3 * trud) * S, hp, maxHp: hp, t: Math.random() * 6, amp: (40 + Math.random() * 50) * S, pkt: 120 };
   } else {
-    w = { typ: 'mysliwiec', x, y: -60 * S, vy: (120 + tr * 10) * S, hp: 1, maxHp: 1, t: 0, pkt: 100 };
+    const hp = hpSk(1);
+    w = { typ: 'mysliwiec', x, y: -60 * S, vy: (110 + 3 * trud) * S, hp, maxHp: hp, t: 0, pkt: 100,
+      moze: trud >= 5 && Math.random() < Math.min(0.85, 0.15 + trud * 0.02), strzal: losuj(0.1, 0.8) };
   }
   w.r = ROZ_R[w.typ] * S;
   w.obj = new THREE.Group(); const m = klonModelu('enemy_' + w.typ); m.rotation.y = Math.PI; m.rotation.order = 'YXZ'; w.obj.add(m); w.model = m;
   scene.add(w.obj);
   wrogowie.push(w);
+}
+function celuj(x, y, v, odchylka, extra) { // pocisk wroga wycelowany w gracza
+  const kat = Math.atan2(gracz.y - y, gracz.x - x) + (odchylka || 0);
+  const p = { x, y, vx: Math.cos(kat) * v, vy: Math.sin(kat) * v };
+  if (extra) Object.assign(p, extra);
+  wrogiePociski.push(p); return p;
+}
+function ruchWroga(w, dt) {
+  w.t += dt; w.y += w.vy * dt;
+  if (w.typ === 'zygzak') w.x = w.x0 + Math.sin(w.t * 2.6) * w.amp;
+  else if (w.typ === 'bombowiec') {
+    w.strzal -= dt;
+    if (w.strzal <= 0 && w.y > 0 && w.y < H * 0.7) {
+      w.strzal = Math.max(0.6, (1.6 - trud * 0.03) / MNOZNIK[runda - 1]);
+      celuj(w.x, w.y + 30 * S, 190 * S * (1 + 0.05 * (runda - 1)));
+    }
+  } else if (w.typ === 'mysliwiec' && w.moze) {
+    w.strzal -= dt;
+    if (w.strzal <= 0 && w.y > H * 0.15 && w.y < H * 0.75) { w.moze = false; wrogiePociski.push({ x: w.x, y: w.y + 20 * S, vx: 0, vy: 260 * S }); }
+  }
 }
 function wybuch(x, y, wielkosc) {
   const n = ruchOgr ? 8 : 26;
@@ -781,17 +881,27 @@ function wybuch(x, y, wielkosc) {
 }
 function trafienieGracza() {
   if (gracz.niezniszczalny > 0 || gracz.tarcza > 0) return;
+  gracz.bron = Math.max(1, gracz.bron - 1); gracz.szybki = 0; gracz.niezniszczalny = 1.2;
+  strataZycia();
+}
+function strataZycia() {
   zycia--; pokazZycia(); dzw.gracz();
   wybuch(gracz.x, gracz.y, 1.4 * S);
-  gracz.bron = Math.max(1, gracz.bron - 1); gracz.szybki = 0; gracz.niezniszczalny = 2;
-  if (zycia <= 0) koniec();
+  if (zycia <= 0) koniec(false);
+}
+function przeciek() { // wróg przeleciał dolną krawędzią
+  punkty = Math.max(0, punkty - 25); ePunkty.textContent = punkty;
+  lvl.przecieki++; odtworz(el('alarm'), 'pokaz'); dzw.alarm();
+  if (lvl.przecieki >= PRZECIEKI_MAX) { lvl.przecieki = 0; komunikat('LINIA OBRONY PRZEŁAMANA'); strataZycia(); }
+  else komunikat('PRZELECIAŁ! ' + lvl.przecieki + ' / ' + PRZECIEKI_MAX);
+  pokazPrzecieki();
 }
 const kolizja = (a, b, ra, rb) => { const dx = a.x - b.x, dy = a.y - b.y; return dx * dx + dy * dy < (ra + rb) * (ra + rb); };
 
 // ---------- bonusy (Battle City: migające kafelki z ikonami) ----------
 const BONUSY = {
-  gwiazda: { kol: '#f2b134', waga: 26 }, tarcza: { kol: '#4aa8ff', waga: 18 }, zycie: { kol: '#3ecf6b', waga: 6 },
-  bomba: { kol: '#e0483c', waga: 12 }, zegar: { kol: '#8fe3ff', waga: 12 }, blyskawica: { kol: '#ffe14a', waga: 15 },
+  gwiazda: { kol: '#f2b134', waga: 26 }, tarcza: { kol: '#4aa8ff', waga: 14 }, zycie: { kol: '#3ecf6b', waga: 0 }, // 1UP tylko za pokonanie bossa
+  bomba: { kol: '#e0483c', waga: 5 }, zegar: { kol: '#8fe3ff', waga: 7 }, blyskawica: { kol: '#ffe14a', waga: 12 },
 };
 const IKONY = {
   gwiazda(c) { c.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 4.4 : 10, a = i / 10 * Math.PI * 2 - Math.PI / 2; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); c.fill(); },
@@ -841,32 +951,31 @@ function podniesBonus(b) {
   punkty += 50; ePunkty.textContent = punkty;
   switch (b.typ) {
     case 'gwiazda': if (gracz.bron < 4) gracz.bron++; komunikat('BROŃ: ' + BRONIE[gracz.bron - 1].nazwa); dzw.bron(); break;
-    case 'tarcza': gracz.tarcza = 9; komunikat('OSŁONA'); dzw.tarcza(); break;
-    case 'zycie': zycia++; pokazZycia(); komunikat('+1 ŻYCIE'); dzw.zycie(); break;
+    case 'tarcza': gracz.tarcza = 5; komunikat('OSŁONA'); dzw.tarcza(); break;
+    case 'zycie': if (zycia < ZYCIA_MAX) { zycia++; pokazZycia(); komunikat('+1 ŻYCIE'); } else { punkty += 300; ePunkty.textContent = punkty; komunikat('+300 PKT'); } dzw.zycie(); break;
     case 'bomba': komunikat('BOMBA!'); bomba(); break;
-    case 'zegar': zamroz = 5; komunikat('WROGOWIE ZAMROŻENI'); dzw.zegar(); break;
+    case 'zegar': zamroz = 3; komunikat('WROGOWIE ZAMROŻENI'); dzw.zegar(); break;
     case 'blyskawica': gracz.szybki = 10; komunikat('SZYBKI OGIEŃ'); dzw.blyskawica(); break;
   }
 }
 function bomba() {
   dzw.bomba(); blysk = 1;
-  for (const w of wrogowie) if (!w.zniszczony) trafWroga(w, 5, true);
+  for (const w of wrogowie) if (!w.zniszczony) trafWroga(w, w.boss ? 12 : 8, true);
   wrogiePociski = [];
+}
+function mozeDropic(w) { // bonusy rzadkie: odstęp 12 s, maks. 3 na poziom, gwarancja jednego w połowie poziomu
+  if (bonusCd > 0 || lvl.bonusyPoz >= 3 || lvl.faza !== 'walka') return false;
+  if (Math.random() < (ELITA.has(w.typ) ? 0.5 : 0.1)) return true;
+  return lvl.bonusyPoz === 0 && lvl.ile > 0 && lvl.zabitePoz >= lvl.ile * 0.5;
 }
 function trafWroga(w, dmg, cichy) {
   w.hp -= dmg; w.trafiony = 0.08;
   if (!cichy) dzw.traf();
   if (w.hp > 0) return;
-  w.zniszczony = true; punkty += w.pkt; zabite++; ePunkty.textContent = punkty;
-  wybuch(w.x, w.y, (w.typ === 'bombowiec' ? 1.8 : 1) * S);
-  if (!cichy || Math.random() < 0.35) dzw.wybuch(w.typ === 'bombowiec');
-  if (w.typ === 'bombowiec' || Math.random() < 0.08) nowyBonus(w.x, w.y);
-  if (zabite % 20 === 0) { // nagroda za serię zestrzeleń: życie od razu + lecący bonus 1UP
-    zycia++; pokazZycia(); komunikat('+1 ŻYCIE · ' + zabite + ' zestrzeleń'); dzw.zycie();
-    nowyBonus(w.x, w.y, 'zycie');
-  }
-  const nowa = 1 + Math.floor(zabite / 15);
-  if (nowa !== fala) { fala = nowa; eFala.textContent = fala; baner('RUNDA ' + fala); dzw.runda(); doWroga = Math.max(doWroga, 2.2); }
+  w.zniszczony = true; punkty += w.pkt; zabite++; lvl.zabitePoz++; ePunkty.textContent = punkty;
+  wybuch(w.x, w.y, (w.duzy ? 1.8 : 1) * S);
+  if (!cichy || Math.random() < 0.35) dzw.wybuch(!!w.duzy);
+  if (mozeDropic(w)) { nowyBonus(w.x, w.y); lvl.bonusyPoz++; bonusCd = 12; }
 }
 
 function strzel() {
@@ -917,31 +1026,26 @@ function krok(dt) {
   pociski = pociski.filter((p) => p.y > -40 && p.x > -40 && p.x < W + 40 && !p.zuzyty);
 
   const zam = zamroz > 0; zamroz = Math.max(0, zamroz - dt);
-  if (!zam) doWroga -= dt;
-  if (doWroga <= 0) { dodajWroga(); doWroga = Math.max(0.28, 1.0 - fala * 0.06) * (0.6 + Math.random() * 0.8); }
+  bonusCd = Math.max(0, bonusCd - dt);
+  if (lvl.faza === 'walka') {
+    doWroga -= dt;
+    if (lvl.zostalo > 0 && doWroga <= 0) { dodajWroga(wybierzTyp()); lvl.zostalo--; doWroga = lvl.odstep * (0.65 + Math.random() * 0.7); }
+  }
   for (const w of wrogowie) {
-    if (!zam) {
-      w.t += dt; w.y += w.vy * dt;
-      if (w.typ === 'zygzak') w.x = w.x0 + Math.sin(w.t * 2.6) * w.amp;
-      if (w.typ === 'bombowiec') {
-        w.strzal -= dt;
-        if (w.strzal <= 0 && w.y > 0 && w.y < H * 0.7) {
-          w.strzal = Math.max(0.7, 1.6 - fala * 0.06);
-          const kat = Math.atan2(gracz.y - w.y, gracz.x - w.x), vp = 190 * S;
-          wrogiePociski.push({ x: w.x, y: w.y + 30 * S, vx: Math.cos(kat) * vp, vy: Math.sin(kat) * vp });
-        }
-      }
-      if (w.typ === 'mysliwiec' && fala >= 4 && !w.oddal && w.y > H * 0.25 && Math.random() < 0.01) {
-        w.oddal = true; wrogiePociski.push({ x: w.x, y: w.y + 20 * S, vx: 0, vy: 260 * S });
-      }
-    }
+    if (!(zam && !w.boss)) ruchWroga(w, dt);
     for (const p of pociski) if (!p.zuzyty && !w.zniszczony && kolizja(p, w, 4 * S, w.r)) { p.zuzyty = true; trafWroga(w, p.dmg); }
     if (w.trafiony) w.trafiony = Math.max(0, w.trafiony - dt);
-    if (!w.zniszczony && kolizja(w, gracz, w.r * 0.8, profil.r * S)) { w.zniszczony = true; wybuch(w.x, w.y, S); dzw.wybuch(false); trafienieGracza(); }
+    if (!w.zniszczony && !w.naziemny && kolizja(w, gracz, w.r * 0.8, profil.r * S)) {
+      if (!w.boss) { w.zniszczony = true; wybuch(w.x, w.y, S); dzw.wybuch(false); }
+      trafienieGracza();
+    }
   }
-  for (const w of wrogowie) if (!w.zniszczony && w.y - w.r > H + 60 * S) { w.zniszczony = true; punkty = Math.max(0, punkty - 25); ePunkty.textContent = punkty; }
+  for (const w of wrogowie) if (!w.zniszczony && w.y - w.r > H + 60 * S) { w.zniszczony = true; if (!w.naziemny && !w.boss) przeciek(); }
   for (const w of wrogowie) if (w.zniszczony) usun(w.obj);
   wrogowie = wrogowie.filter((w) => !w.zniszczony);
+  if (stan !== 'gra') return;
+  if (lvl.faza === 'walka') { if (!lvl.boss && lvl.zostalo === 0 && !wrogowie.length) ukonczPoziom(); }
+  else if (lvl.faza === 'przerwa') { lvl.przerwa -= dt; if (lvl.przerwa <= 0) { if (lvl.final) koniec(true); else nastepnyPoziom(); } }
 
   for (const p of wrogiePociski) {
     p.x += p.vx * dt; p.y += p.vy * dt;
@@ -949,7 +1053,7 @@ function krok(dt) {
   }
   wrogiePociski = wrogiePociski.filter((p) => !p.zuzyty && p.y < H + 20 && p.y > -20 && p.x > -20 && p.x < W + 20);
 
-  for (const b of bonusy) {
+  for (const b of [...bonusy]) {
     b.t += dt; b.y += b.vy * dt; b.x = klamp(b.x0 + Math.sin(b.t * 2.2) * 16 * S, 24 * S, W - 24 * S);
     if (kolizja(b, gracz, 20 * S, 26 * S)) { b.wziety = true; podniesBonus(b); }
   }
@@ -1053,7 +1157,7 @@ let hudSig = '';
 function hud() {
   const sig = gracz.bron;
   if (sig !== hudSig) { hudSig = sig; el('hud-bron-nazwa').textContent = BRONIE[gracz.bron - 1].nazwa; el('hud-pips').innerHTML = [1, 2, 3, 4].map((i) => '<span class="pip' + (i <= gracz.bron ? ' on' : '') + '"></span>').join(''); }
-  for (const [id, ile, max] of [['tarcza', gracz.tarcza, 9], ['blyskawica', gracz.szybki, 10], ['zegar', zamroz, 5]]) {
+  for (const [id, ile, max] of [['tarcza', gracz.tarcza, 5], ['blyskawica', gracz.szybki, 10], ['zegar', zamroz, 3]]) {
     const b = el('buff-' + id); b.hidden = ile <= 0;
     if (ile > 0) b.querySelector('i').style.width = (100 * ile / max).toFixed(1) + '%';
   }
@@ -1069,7 +1173,12 @@ function petla(t) {
 zbudujWybor(); muzEtykiety(); rozmiar(); pokazZycia();
 requestAnimationFrame(petla);
 window.__eskadraOK = true;
-window.__eskadra = { start, pauza, get stan() { return stan; }, dodajWroga, ustawFale(n) { fala = n; }, get wrogowie() { return wrogowie; } };
+window.__eskadra = {
+  start, pauza, dodajWroga, get stan() { return stan; }, get wrogowie() { return wrogowie; }, get gracz() { return gracz; }, get lvl() { return lvl; },
+  get info() { return { runda, poziom, trud, zycia, punkty, zabite, bonusy: bonusy.length, wrogiePociski: wrogiePociski.length }; },
+  symuluj(sek, dt = 1 / 60, bot) { for (let t = 0; t < sek && stan === 'gra'; t += dt) { if (bot) bot(gracz, wrogowie, wrogiePociski, bonusy); krok(dt); } },
+  skocz(r, p) { wyczyscSwiat(); runda = r; poziom = p; eFala.textContent = r; zmienMotyw(r - 1, true); gracz.niezniszczalny = 1.5; rozpocznijPoziom(true); },
+};
 </script>
 </body>
 </html>
