@@ -12,3 +12,12 @@ Rozgrywka: 4 rundy po 10 poziomów (poziom 10 = boss). Rundy: 1 Morze, 2 Pustyni
 Bonusy są rzadkie (odstęp 12 s, maks. 3 na poziom), 1UP tylko za bossa, limit 5 żyć. Wróg, który przeleci dołem, to "przeciek":
 5 przecieków w poziomie = utrata życia (nie dotyczy rundy 4).
 Testy logiki (Playwright): hooki window.__eskadra.symuluj / skocz / info.
+
+Walka z bossami (poziom 10 każdej rundy; po pokonaniu bossa zaczyna się kolejna runda, po 4. — ekran "Gratulacje!"):
+  Pasek życia: gracz ma pasek (100) i kilka żyć — trafienie zabiera część paska, po wyczerpaniu tracisz życie. Boss też ma pasek życia.
+  R1 Admirał: rdzeń opancerzony (20% obrażeń), póki żyją dwa działa na skrzydłach -> najpierw zniszcz działa.
+  R2 Gunship Alfa: czerwony pas ostrzega przed szarżą -> zjedź w bok; po szarży jest przegrzany (x2 obrażeń).
+  R3 Lodowy Lewiatan: pancerz na zmianę zamknięty (nietykalny) i otwarty (cyjan) -> strzelaj tylko, gdy otwarty; pociski lodu spowalniają.
+  R4 Cytadela: 4 generatory osłaniają rdzeń (im mniej ich, tym więcej obrażeń przyjmuje); po zniszczeniu wszystkich — obrotowy laser.
+Poziomy trudności (menu, strzałki góra/dół): łatwy / średni / trudny zmieniają liczbę żyć, HP i szybkostrzelność wrogów, obrażenia,
+częstość bonusów, okna na bossach i mnożnik punktów. Rekordy są osobne dla każdego poziomu.

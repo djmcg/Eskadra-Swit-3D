@@ -59,6 +59,23 @@
   .boss .pasek-boss { height: 10px; margin-top: 3px; background: rgba(255,255,255,.2); border-radius: 5px; overflow: hidden; border: 1px solid rgba(0,0,0,.4); }
   .boss .pasek-boss i { display: block; height: 100%; background: #e0483c; }
   @media (min-width: 761px) { .boss { top: 92px; } }
+  .hp { display: block; width: 150px; height: 10px; margin-top: 3px; background: rgba(255,255,255,.18); border-radius: 5px; overflow: hidden; border: 1px solid rgba(0,0,0,.45); }
+  .hp i { display: block; height: 100%; width: 100%; background: #3ecf6b; transition: width .12s, background .2s; }
+  .boss small { display: block; margin-top: 3px; font-family: var(--font-tekst); font-size: 14px; letter-spacing: .03em; font-weight: 700; color: var(--tekst); }
+  .boss-opis { position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px; width: min(92%, 520px); box-sizing: border-box; padding: 8px 14px; border-radius: 12px; background: rgba(9,30,48,.86); border: 1px solid rgba(242,177,52,.45); pointer-events: none; text-align: center; opacity: 0; }
+  .boss-opis b { display: block; font-family: var(--font-tytul); font-weight: 400; font-size: 17px; letter-spacing: .06em; color: var(--akcent); }
+  .boss-opis span { display: block; font-size: 15px; line-height: 1.25; color: var(--tekst); }
+  .boss-opis.pokaz { animation: bossopis 9s ease both; }
+  @keyframes bossopis { 0% { opacity: 0; transform: translate(-50%, 10px); } 5% { opacity: 1; transform: translate(-50%, 0); } 90% { opacity: 1; } 100% { opacity: 0; } }
+  .trudnosc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 2px; }
+  .trud { background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.16); border-radius: 12px; color: var(--tekst); font-family: var(--font-tytul); font-size: 17px; padding: 8px 4px; cursor: pointer; letter-spacing: .03em; }
+  .trud:hover { background: rgba(255,255,255,.12); }
+  .trud.wybrany { border-color: var(--akcent); background: rgba(242,177,52,.14); box-shadow: 0 0 14px rgba(242,177,52,.3); color: var(--akcent); }
+  .karta p.opis-trud { font-size: 14px; min-height: 2.6em; }
+  .lista-bossow { display: flex; flex-direction: column; gap: 12px; text-align: left; max-height: 62vh; overflow-y: auto; touch-action: pan-y; }
+  .lista-bossow h3 { margin: 0; font-family: var(--font-tytul); font-weight: 400; font-size: 17px; color: var(--akcent); letter-spacing: .04em; }
+  .lista-bossow p { font-size: 14px; margin: 2px 0 0; line-height: 1.3; }
+  .lista-bossow b { color: var(--tekst); }
   .alarm { position: absolute; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 110px 26px rgba(255, 40, 30, .7); }
   .alarm.pokaz { animation: alarm .55s ease both; }
   @keyframes alarm { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
@@ -145,7 +162,7 @@
   <div class="legenda" aria-label="Skróty klawiszowe"><span><kbd>M</kbd>muzyka wł./wył.</span><span><kbd>Esc</kbd>/<kbd>P</kbd>pauza</span><span><kbd>F</kbd>pełny ekran</span><span><kbd>WASD</kbd>/<kbd>←↑↓→</kbd>/mysz ruch</span></div>
   <div class="panel">
     <div class="blok"><span class="etyk">Punkty</span><span class="wart" id="punkty">0</span></div>
-    <div class="blok prawo"><span class="etyk">Runda <span id="fala">1</span> · Poz. <span id="poziom">1</span>/10 · Rekord <span id="rekord">0</span></span><span class="zycia" id="zycia" aria-label="Życia">▲▲▲</span><span class="przecieki" id="przecieki" aria-label="Przecieki"></span></div>
+    <div class="blok prawo"><span class="etyk">Runda <span id="fala">1</span> · Poz. <span id="poziom">1</span>/10 · Rekord <span id="rekord">0</span></span><span class="zycia" id="zycia" aria-label="Życia">▲▲▲</span><span class="hp" id="hp" role="progressbar" aria-label="Wytrzymałość" aria-valuemin="0" aria-valuemax="100"><i id="hp-pasek"></i></span><span class="przecieki" id="przecieki" aria-label="Przecieki"></span></div>
   </div>
   <div class="hud-bronie" id="hud-bronie" hidden>
     <div class="hud-bron"><span id="hud-bron-nazwa">BLASTER</span><span id="hud-pips"></span></div>
@@ -158,7 +175,8 @@
     <button type="button" id="btn-pelny" title="Pełny ekran (F)" aria-label="Pełny ekran">⛶</button>
     <button type="button" id="btn-pauza-hud" title="Pauza (Esc)" aria-label="Pauza">II</button>
   </div>
-  <div class="boss" id="boss" hidden><span id="boss-nazwa">BOSS</span><div class="pasek-boss"><i id="boss-pasek" style="width:100%"></i></div></div>
+  <div class="boss" id="boss" hidden><span id="boss-nazwa">BOSS</span><div class="pasek-boss"><i id="boss-pasek" style="width:100%"></i></div><small id="boss-info"></small></div>
+  <div class="boss-opis" id="boss-opis" hidden><b id="boss-opis-nazwa"></b><span id="boss-opis-1"></span><span id="boss-opis-2"></span></div>
   <div class="blysk" id="blysk"></div>
   <div class="alarm" id="alarm"></div>
   <div class="baner" id="baner" aria-live="polite"></div>
@@ -167,9 +185,12 @@
   <div class="nakladka" id="ekran-menu">
     <div class="karta">
       <h1>Eskadra Świt<small>3D</small></h1>
-      <p>Bronisz wybrzeża przez 4 rundy po 10 poziomów. Zestrzel wrogów, zanim przelecą.</p>
+      <p>Bronisz wybrzeża przez 4 rundy po 10 poziomów. Na końcu rundy czeka boss.</p>
       <h2>Wybierz samolot</h2>
       <div class="wybor" id="wybor" role="radiogroup" aria-label="Wybór samolotu"></div>
+      <h2>Poziom trudności</h2>
+      <div class="trudnosc" id="wybor-trud" role="radiogroup" aria-label="Poziom trudności"></div>
+      <p class="opis-trud" id="opis-trud"></p>
       <div class="sterowanie">
         <b>Mysz / dotyk</b><span>steruj kursorem lub palcem, ogień automatyczny</span>
         <b>Klawiatura</b><span>strzałki / WASD, ←→ wybór samolotu</span>
@@ -180,7 +201,17 @@
       <div class="rzad">
         <button class="glowny" id="btn-start" type="button" disabled>Ładowanie…</button>
         <button class="drugi js-muz-tekst" id="btn-muz-menu" type="button">Muzyka</button>
+        <button class="drugi" id="btn-bossy" type="button">Bossowie</button>
       </div>
+    </div>
+  </div>
+
+  <div class="nakladka" id="ekran-bossy" hidden>
+    <div class="karta" role="dialog" aria-labelledby="bossy-tytul">
+      <h1 id="bossy-tytul">Bossowie</h1>
+      <p>Na końcu każdej rundy czeka boss z własną mechaniką.</p>
+      <div class="lista-bossow" id="lista-bossow"></div>
+      <button class="glowny" id="btn-bossy-wroc" type="button">Wróć</button>
     </div>
   </div>
 
@@ -214,15 +245,27 @@ import { GLTFLoader } from './vendor/GLTFLoader.js';
 
 const el = (id) => document.getElementById(id);
 const ePunkty = el('punkty'), eFala = el('fala'), ePoziom = el('poziom'), eRekord = el('rekord'), eZycia = el('zycia'), ePrzecieki = el('przecieki');
-const ekrany = { menu: el('ekran-menu'), pauza: el('ekran-pauza'), koniec: el('ekran-koniec') };
+const ekrany = { menu: el('ekran-menu'), pauza: el('ekran-pauza'), koniec: el('ekran-koniec'), bossy: el('ekran-bossy') };
 const ruchOgr = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const losuj = (a, b) => a + Math.random() * (b - a);
 const klamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------- ustawienia ----------
-const ust = { muzyka: true, gMuz: 0.6, gSfx: 0.8, samolot: 0 };
+const ust = { muzyka: true, gMuz: 0.6, gSfx: 0.8, samolot: 0, trudnosc: 'sredni' };
 try { Object.assign(ust, JSON.parse(localStorage.getItem('eskadra-swit-3d-ust') || '{}')); } catch (e) {}
 ust.samolot = ust.samolot === 1 ? 1 : 0;
+// poziomy trudności: mnożniki wrogów (HP, tempo ognia, prędkość pocisków, liczebność), obrażenia gracza, bonusy, okna na bossach
+const TRUDNOSCI = {
+  latwy: { nazwa: 'ŁATWY', opis: '5 żyć, słabsi i wolniej strzelający wrogowie, więcej bonusów, dłuższe okna na bossach. Punkty ×0,75.',
+    zycia: 5, zyciaMax: 7, obr: 0.6, hpWr: 0.8, ogien: 0.8, pocisk: 0.9, ilosc: 0.85, bossHp: 0.75, bonusCd: 8, bonusMax: 4, przecieki: 7, iframe: 0.9, okno: 1.35, ostrz: 1.35, wscieklosc: 0.35, punkty: 0.75 },
+  sredni: { nazwa: 'ŚREDNI', opis: '3 życia, wyważona walka. Bonusy co ok. 12 s, boss wpada w szał przy 50% zdrowia. Punkty ×1.',
+    zycia: 3, zyciaMax: 5, obr: 1, hpWr: 1, ogien: 1, pocisk: 1, ilosc: 1, bossHp: 1, bonusCd: 12, bonusMax: 3, przecieki: 5, iframe: 0.6, okno: 1, ostrz: 1, wscieklosc: 0.5, punkty: 1 },
+  trudny: { nazwa: 'TRUDNY', opis: '2 życia, mocniejsi i szybsi wrogowie, rzadkie bonusy, krótkie okna na bossach, szał bossa już przy 65%. Punkty ×1,5.',
+    zycia: 2, zyciaMax: 4, obr: 1.4, hpWr: 1.3, ogien: 1.25, pocisk: 1.12, ilosc: 1.2, bossHp: 1.3, bonusCd: 18, bonusMax: 2, przecieki: 3, iframe: 0.45, okno: 0.75, ostrz: 0.8, wscieklosc: 0.65, punkty: 1.5 },
+};
+const TRUDNOSCI_ID = ['latwy', 'sredni', 'trudny'];
+if (!TRUDNOSCI[ust.trudnosc]) ust.trudnosc = 'sredni';
+let TR = TRUDNOSCI[ust.trudnosc];
 const zapiszUst = () => { try { localStorage.setItem('eskadra-swit-3d-ust', JSON.stringify(ust)); } catch (e) {} };
 
 const PROFILE = [
@@ -427,7 +470,8 @@ function aktualizujOpady(dt, czas) {
 // MODELE (GLB z Blendera)
 // ============================================================
 const MODELE = {};
-const NAZWY = ['player1_delta', 'player2_canard', 'enemy_mysliwiec', 'enemy_zygzak', 'enemy_bombowiec', 'island_1', 'island_2', 'island_3'];
+const BOSS_MODEL = ['bosses/boss1_admiral_lite', 'bosses/boss2_gunship_lite', 'bosses/boss3_lewiatan_lite', 'bosses/boss4_cytadela_lite'];
+const NAZWY = ['player1_delta', 'player2_canard', 'enemy_mysliwiec', 'enemy_zygzak', 'enemy_bombowiec', 'island_1', 'island_2', 'island_3', ...BOSS_MODEL];
 const PX_NA_JEDN = { player1_delta: 12.5, player2_canard: 12.5, enemy_mysliwiec: 15, enemy_zygzak: 15, enemy_bombowiec: 24 };
 let zaladowane = 0;
 const loader = new GLTFLoader();
@@ -682,6 +726,7 @@ const dzw = {
   klik() { ton(700, 950, 0.05, 'square', 0.08); },
   poziom() { [659, 880].forEach((f, i) => ton(f, f, 0.12, 'square', 0.09, teraz(i * 0.09))); },
   alarm() { ton(220, 150, 0.22, 'sawtooth', 0.14); },
+  oberwal() { ton(160, 80, 0.14, 'sawtooth', 0.16); szum(0.08, 0.2, 2500, 400, 'lowpass'); },
   lod() { ton(1800, 600, 0.25, 'triangle', 0.12); szum(0.18, 0.2, 7000, 2500, 'highpass'); },
 };
 
@@ -769,12 +814,18 @@ function przelaczMuzyke() { audioInit(); ust.muzyka = !ust.muzyka; zapiszUst(); 
 // ============================================================
 let stan = 'menu'; // menu | gra | pauza | koniec
 let punkty = 0, runda = 1, poziom = 1, trud = 1, zycia = 3, zabite = 0, rekord = 0;
-try { rekord = parseInt(localStorage.getItem('eskadra-swit-3d-rekord') || '0', 10) || 0; } catch (e) {}
-eRekord.textContent = rekord;
-const gracz = { x: 0, y: 0, vx: 0, cel: null, cooldown: 0, bron: 1, szybki: 0, tarcza: 0, niezniszczalny: 0, bank: 0, lod: 0 };
+const HP_MAX = 100; // pasek życia gracza; trafienia zabierają jego część, a po wyczerpaniu tracisz jedno życie
+const DMG = { pocisk: 20, zderzenie: 35, bossZderzenie: 45, lod: 10, rakieta: 32, laser: 22, przeciek: 40 }; // bazowe obrażenia (mnożone przez TR.obr)
+const gracz = { x: 0, y: 0, vx: 0, cel: null, cooldown: 0, bron: 1, szybki: 0, tarcza: 0, niezniszczalny: 0, bank: 0, lod: 0, hp: HP_MAX };
 let pociski = [], wrogowie = [], wrogiePociski = [], wybuchy = [], bonusy = [];
 let blysk = 0, zamroz = 0, doWroga = 0, bonusCd = 0;
 const klawisze = {};
+function wczytajRekord() {
+  rekord = 0;
+  try { let v = localStorage.getItem('eskadra-swit-3d-rekord-' + ust.trudnosc); if (v === null && ust.trudnosc === 'sredni') v = localStorage.getItem('eskadra-swit-3d-rekord'); rekord = parseInt(v || '0', 10) || 0; } catch (e) {}
+  eRekord.textContent = rekord;
+}
+const dodajPkt = (n) => { punkty += Math.round(n * TR.punkty); ePunkty.textContent = punkty; };
 
 const BRONIE = [
   { nazwa: 'BLASTER', cd: 1.0, kol: '#ffe9a8', lufy: [{}] },
@@ -787,6 +838,28 @@ const PX_ENEMY = { mysliwiec: 15, zygzak: 15, bombowiec: 24, kamikadze: 11.5, sm
 
 // ---------- UI ----------
 function pokazEkran(n) { for (const k in ekrany) ekrany[k].hidden = k !== n; }
+function pokazHp() {
+  const b = el('hp-pasek'), f = Math.max(0, gracz.hp) / HP_MAX;
+  b.style.width = (f * 100).toFixed(0) + '%'; b.style.background = f > 0.5 ? '#3ecf6b' : f > 0.25 ? '#f2b134' : '#e0483c';
+  el('hp').setAttribute('aria-valuenow', Math.max(0, Math.round(gracz.hp)));
+}
+function leczenie(n) { gracz.hp = Math.min(HP_MAX, gracz.hp + n); pokazHp(); }
+function zbudujTrudnosc() {
+  const w = el('wybor-trud'); w.innerHTML = '';
+  TRUDNOSCI_ID.forEach((id) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'trud'; b.setAttribute('role', 'radio'); b.dataset.id = id; b.textContent = TRUDNOSCI[id].nazwa;
+    b.addEventListener('click', () => { audioInit(); ustawTrudnosc(id); dzw.klik(); });
+    w.appendChild(b);
+  });
+  ustawTrudnosc(ust.trudnosc);
+}
+function ustawTrudnosc(id) {
+  if (!TRUDNOSCI[id]) return;
+  ust.trudnosc = id; TR = TRUDNOSCI[id]; zapiszUst();
+  for (const b of el('wybor-trud').children) { b.classList.toggle('wybrany', b.dataset.id === id); b.setAttribute('aria-checked', b.dataset.id === id); }
+  el('opis-trud').textContent = TR.opis; wczytajRekord();
+}
+function zmienTrudnosc(d) { ustawTrudnosc(TRUDNOSCI_ID[(TRUDNOSCI_ID.indexOf(ust.trudnosc) + d + 3) % 3]); }
 function pokazZycia() { eZycia.textContent = zycia <= 6 ? '▲'.repeat(Math.max(0, zycia)) : '▲ ×' + zycia; }
 function odtworz(elem, cls) { elem.classList.remove(cls); void elem.offsetWidth; elem.classList.add(cls); }
 function baner(txt, pod) { const b = el('baner'); b.innerHTML = '<span></span>' + (pod ? '<small></small>' : ''); b.firstChild.textContent = txt; if (pod) b.lastChild.textContent = pod; odtworz(b, 'pokaz'); }
@@ -804,6 +877,13 @@ function zbudujWybor() {
   });
   wybierz(ust.samolot);
 }
+function zbudujBossy() {
+  const l = el('lista-bossow'); l.innerHTML = '';
+  BOSS_DANE.forEach((d, i) => {
+    const h = document.createElement('div'); h.innerHTML = '<h3></h3><p><b>Mechanika:</b> <span class="m"></span></p><p><b>Jak pokonać:</b> <span class="r"></span></p>';
+    h.querySelector('h3').textContent = 'Runda ' + (i + 1) + ' · ' + d.nazwa; h.querySelector('.m').textContent = d.mech; h.querySelector('.r').textContent = d.rada; l.appendChild(h);
+  });
+}
 function wybierz(i) {
   ust.samolot = i; profil = PROFILE[i]; zapiszUst();
   [...el('wybor').children].forEach((b, j) => { b.classList.toggle('wybrany', j === i); b.setAttribute('aria-checked', j === i); });
@@ -813,14 +893,15 @@ function wyczyscSwiat() {
   for (const w of wrogowie) usun(w.obj);
   for (const b of bonusy) { scene.remove(b.spr); scene.remove(b.glow); }
   pociski = []; wrogowie = []; wrogiePociski = []; wybuchy = []; bonusy = [];
-  blysk = 0; zamroz = 0; el('boss').hidden = true; bossSig = '';
+  blysk = 0; zamroz = 0; el('boss').hidden = true; el('boss-opis').hidden = true; bossSig = '';
+  gracz.hp = HP_MAX; pokazHp();
   gracz.x = W / 2; gracz.y = H - 100 * S; gracz.cel = null; gracz.bron = 1; gracz.szybki = 0; gracz.tarcza = 0; gracz.cooldown = 0; gracz.vx = 0; gracz.bank = 0; gracz.lod = 0;
 }
 function start() {
   if (zaladowane < NAZWY.length) return;
   audioInit(); profil = PROFILE[ust.samolot];
   stan = 'gra'; document.body.classList.add('gra');
-  punkty = 0; runda = 1; poziom = 1; zycia = 3; zabite = 0; bonusCd = 0; wyczyscSwiat();
+  punkty = 0; runda = 1; poziom = 1; zycia = TR.zycia; zabite = 0; bonusCd = 0; wyczyscSwiat();
   zmienMotyw(0, true);
   gracz.niezniszczalny = 1.5;
   ePunkty.textContent = '0'; eFala.textContent = '1'; pokazZycia();
@@ -842,13 +923,15 @@ function wznow() {
   for (const k in klawisze) klawisze[k] = false;
 }
 function koniec(wygrana) {
-  stan = 'koniec'; document.body.classList.remove('gra'); el('narzedzia').hidden = true; el('hud-bronie').hidden = true; el('boss').hidden = true; dzw.koniec();
-  if (wygrana) punkty += zycia * 500;
+  stan = 'koniec'; document.body.classList.remove('gra'); el('narzedzia').hidden = true; el('hud-bronie').hidden = true; el('boss').hidden = true; el('boss-opis').hidden = true; dzw.koniec();
+  const premiaZ = wygrana ? Math.round(zycia * 500 * TR.punkty) : 0; punkty += premiaZ;
   const nowy = punkty > rekord;
-  if (nowy) { rekord = punkty; try { localStorage.setItem('eskadra-swit-3d-rekord', String(rekord)); } catch (e) {} eRekord.textContent = rekord; }
-  el('koniec-tytul').textContent = wygrana ? 'Zwycięstwo!' : 'Misja zakończona';
+  if (nowy) { rekord = punkty; try { localStorage.setItem('eskadra-swit-3d-rekord-' + ust.trudnosc, String(rekord)); } catch (e) {} eRekord.textContent = rekord; }
+  el('koniec-tytul').textContent = wygrana ? 'Gratulacje!' : 'Misja zakończona';
   el('koniec-punkty').textContent = punkty;
-  el('koniec-opis').textContent = 'punktów · ' + (wygrana ? 'wszystkie 4 rundy ukończone (+' + zycia * 500 + ' za życia)' : 'runda ' + runda + ' · poziom ' + Math.max(1, poziom)) + (nowy && punkty > 0 ? ' · nowy rekord!' : '');
+  el('koniec-opis').textContent = wygrana
+    ? 'Pokonałeś wszystkich 4 bossów i obroniłeś wybrzeże! Poziom: ' + TR.nazwa + ' · premia za życia +' + premiaZ + (nowy ? ' · nowy rekord!' : '')
+    : 'punktów · poziom ' + TR.nazwa + ' · runda ' + runda + ' · poziom ' + Math.max(1, poziom) + (nowy && punkty > 0 ? ' · nowy rekord!' : '');
   pokazEkran('koniec'); el('btn-znowu').focus({ preventScroll: true });
 }
 function pelnyEkran() {
@@ -858,6 +941,8 @@ function pelnyEkran() {
 
 el('btn-start').addEventListener('click', () => { if (bladLadowania) wczytajModele(); else start(); });
 el('btn-znowu').addEventListener('click', start);
+el('btn-bossy').addEventListener('click', () => { audioInit(); dzw.klik(); pokazEkran('bossy'); el('btn-bossy-wroc').focus({ preventScroll: true }); });
+el('btn-bossy-wroc').addEventListener('click', () => { pokazEkran('menu'); el('btn-start').focus({ preventScroll: true }); });
 el('btn-wznow').addEventListener('click', wznow);
 el('btn-menu-pauza').addEventListener('click', doMenu);
 el('btn-menu-koniec').addEventListener('click', doMenu);
@@ -914,6 +999,8 @@ addEventListener('keydown', (e) => {
   if (stan === 'menu') {
     if (k === 'arrowleft' || k === 'a' || k === '1') { e.preventDefault(); wybierz(0); dzw.klik(); }
     if (k === 'arrowright' || k === 'd' || k === '2') { e.preventDefault(); wybierz(1); dzw.klik(); }
+    if (k === 'arrowup' || k === 'w') { e.preventDefault(); zmienTrudnosc(-1); dzw.klik(); }
+    if (k === 'arrowdown' || k === 's') { e.preventDefault(); zmienTrudnosc(1); dzw.klik(); }
   }
   if (k === 'enter' && document.activeElement?.tagName !== 'BUTTON') {
     if (stan === 'menu' || stan === 'koniec') start(); else if (stan === 'pauza') wznow();
@@ -922,16 +1009,37 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => { klawisze[e.key.toLowerCase()] = false; });
 
 // ---------- rundy i poziomy ----------
-const RUNDY_N = 4, POZ_N = 10, ZYCIA_MAX = 5, PRZECIEKI_MAX = 5;
+const RUNDY_N = 4, POZ_N = 10;
 const NAZWY_RUND = ['MORZE', 'PUSTYNIA', 'ZIMA', 'TWIERDZA'];
-const NAZWY_BOSSOW = ['ADMIRAŁ', 'GUNSHIP ALFA', 'LODOWY LEWIATAN', 'CYTADELA'];
-const BOSS_HP = [80, 130, 170, 240], BOSS_R = [52, 55, 52, 72], BOSS_PX = [36, 33, 36, 24];
+// Każdy boss ma własną mechanikę. hw/hh: połowa wymiarów trafialnego korpusu (px), czesci: osobne cele z własnym HP (dx/dy względem środka).
+const BOSS_DANE = [
+  { nazwa: 'ADMIRAŁ', hp: 90, hw: 66, hh: 52, px: 36,
+    czesci: [{ dx: -88, dy: -20, r: 26, hp: 28 }, { dx: 88, dy: -20, r: 26, hp: 28 }],
+    kr1: 'Rdzeń jest opancerzony, dopóki działają dwa działa na skrzydłach.', kr2: 'Zniszcz pomarańczowe działa, potem dobij rdzeń.',
+    mech: 'Okręt flagowy z pancernym rdzeniem: dopóki żyją oba działa na skrzydłach, rdzeń przyjmuje tylko 20% obrażeń. Działa strzelają w Ciebie podwójnymi seriami. Po ich zniszczeniu rdzeń odsłania się i strzela wachlarzem oraz seriami celowanymi.',
+    rada: 'Najpierw zestrzel oba działa (pomarańczowe znaczniki na skrzydłach), potem atakuj rdzeń. Trzymaj się pod jednym ze skrzydeł i omijaj serie bokiem; wachlarz rdzenia ma luki między pociskami.' },
+  { nazwa: 'GUNSHIP ALFA', hp: 140, hw: 55, hh: 88, px: 34, czesci: [],
+    kr1: 'Co kilka sekund ostrzega czerwonym pasem i szarżuje w dół ekranu.', kr2: 'Zjedź z pasa w bok, potem strzelaj w przegrzanego bossa (×2).',
+    mech: 'Na patrolu strzela wachlarzem i seriami celowanymi. Co kilka sekund namierza Cię czerwonym pasem, a po chwili szarżuje wzdłuż niego przez cały ekran. Po szarży jest przegrzany i wraca powoli: wtedy przyjmuje podwójne obrażenia.',
+    rada: 'Gdy zobaczysz czerwony pas, od razu zjedź z niego w bok (szarża uderza w całą jego szerokość). Gdy boss świeci na pomarańczowo, ustaw się pod nim i strzelaj ile możesz.' },
+  { nazwa: 'LODOWY LEWIATAN', hp: 150, hw: 72, hh: 80, px: 34, czesci: [],
+    kr1: 'Pancerz na zmianę zamyka się (niezniszczalny) i otwiera (cyjan).', kr2: 'Unikaj pocisków i strzelaj tylko, gdy pancerz jest otwarty.',
+    mech: 'Lodowy pancerz na przemian zamyka się (boss jest wtedy odporny na wszystko) i otwiera (boss świeci cyjanem). Zamknięty strzela pociskami lodu, które spowalniają, a przy zmianie fazy wypuszcza pierścień pocisków z lukami.',
+    rada: 'Nie marnuj ognia na zamknięty pancerz — uciekaj przed lodem. Pierścień omiń przez szczelinę. Gdy pancerz się otworzy (świeci cyjanem), podleć i strzelaj, póki się nie zamknie.' },
+  { nazwa: 'CYTADELA', hp: 220, hw: 64, hh: 64, px: 30, naziemny: true,
+    czesci: [{ dx: -70, dy: -70, r: 22, hp: 26 }, { dx: 70, dy: -70, r: 22, hp: 26 }, { dx: -70, dy: 70, r: 22, hp: 26 }, { dx: 70, dy: 70, r: 22, hp: 26 }],
+    kr1: 'Cztery generatory osłaniają reaktor; po ich zniszczeniu odpala laser.', kr2: 'Niszcz narożne kopuły, potem rdzeń. Uciekaj z toru czerwonej linii.',
+    mech: 'Twierdza na podłożu. Cztery narożne generatory osłaniają reaktor: im więcej ich działa, tym mniej obrażeń przyjmuje rdzeń (nawet 85% mniej). Rdzeń strzela spiralą i rakietami. Gdy padną wszystkie generatory, reaktor odpala obrotowy laser.',
+    rada: 'Zestrzel narożne kopuły (pomarańczowe znaczniki), potem atakuj rdzeń. Przed laserem pojawia się cienka czerwona linia: wyjdź z jej toru i przeczekaj omiatanie, a rakiety strąć lub omiń zwrotem.' },
+];
+const NAZWY_BOSSOW = BOSS_DANE.map((b) => b.nazwa);
 const WIEZE_DANE = { // hp, punkty, px na jednostkę modelu, promień trafienia, odstęp strzałów (s, dzielony przez mnożnik rundy)
   dzialko: { hp: 4, pkt: 100, px: 18, r: 22, int: 2.6 }, salwa: { hp: 6, pkt: 160, px: 18, r: 24, int: 3.6 },
   rakieta: { hp: 5, pkt: 180, px: 18, r: 24, int: 4.2 }, bunkier: { hp: 12, pkt: 300, px: 19, r: 34, int: 3.4, duzy: true },
 };
 const MNOZNIK = [1, 1.25, 1.5, 1.8]; // HP i szybkostrzelność wrogów w kolejnych rundach
-const hpSk = (b) => Math.max(1, Math.round(b * MNOZNIK[runda - 1]));
+const hpSk = (b) => Math.max(1, Math.round(b * MNOZNIK[runda - 1] * TR.hpWr));
+const og = () => MNOZNIK[runda - 1] * TR.ogien; // szybkostrzelność wrogów: runda × poziom trudności
 const DOSTEP = [ // typ: [od którego poziomu, waga losowania]
   { mysliwiec: [1, 10], kamikadze: [3, 3], zygzak: [4, 4], bombowiec: [7, 2.5] },
   { mysliwiec: [1, 6], zygzak: [1, 4], kamikadze: [1, 2], bombowiec: [1, 2], smiglowiec: [2, 2.5] },
@@ -945,8 +1053,8 @@ let lvl = { faza: 'walka', zostalo: 0, ile: 0, odstep: 1, boss: false, final: fa
 function pokazPoziom() { ePoziom.textContent = Math.max(1, poziom); }
 function pokazPrzecieki() {
   const n = lvl.przecieki; ePrzecieki.hidden = runda === RUNDY_N;
-  ePrzecieki.textContent = 'PRZECIEKI ' + '●'.repeat(n) + '○'.repeat(PRZECIEKI_MAX - n);
-  ePrzecieki.classList.toggle('grozi', n >= PRZECIEKI_MAX - 1);
+  ePrzecieki.textContent = 'PRZECIEKI ' + '●'.repeat(n) + '○'.repeat(TR.przecieki - n);
+  ePrzecieki.classList.toggle('grozi', n >= TR.przecieki - 1);
 }
 function planPoziomu() {
   const boss = poziom === POZ_N, wieze = runda === RUNDY_N;
@@ -954,7 +1062,7 @@ function planPoziomu() {
   if (boss) { ile = 6 + 2 * runda; odstep = wieze ? 2.2 : 2.6; } // eskorta bossa
   else if (wieze) { ile = 8 + 2 * poziom; odstep = Math.max(0.7, 1.4 - 0.06 * poziom); }
   else { ile = 12 + 2 * poziom + 6 * (runda - 1); odstep = Math.max(0.35, (1.3 - 0.045 * poziom) / (1 + 0.12 * (runda - 1))); }
-  return { ile, odstep, boss };
+  return { ile: Math.max(boss ? 3 : 6, Math.round(ile * TR.ilosc)), odstep, boss };
 }
 function rozpocznijPoziom(cicho) {
   trud = (runda - 1) * POZ_N + poziom;
@@ -962,23 +1070,25 @@ function rozpocznijPoziom(cicho) {
   lvl = { faza: 'walka', zostalo: pl.ile, ile: pl.ile, odstep: pl.odstep, boss: pl.boss, final: false, zabitePoz: 0, bonusyPoz: 0, przecieki: 0, przerwa: 0 };
   doWroga = 1.4; wrogiePociski = [];
   pokazPoziom(); pokazPrzecieki();
-  if (pl.boss) { baner('BOSS', NAZWY_BOSSOW[runda - 1]); dzw.alarm(); dodajWroga('boss'); doWroga = 5; }
+  if (pl.boss) { baner('BOSS', NAZWY_BOSSOW[runda - 1]); dzw.alarm(); dodajWroga('boss'); pokazOpisBossa(runda - 1); doWroga = 5;
+    const minBron = Math.min(3, 1 + Math.ceil(runda / 2)); if (gracz.bron < minBron) { gracz.bron = minBron; komunikat('BROŃ: ' + BRONIE[gracz.bron - 1].nazwa); dzw.bron(); } } // przed bossem broń jest wzmacniana do minimum
   else if (!cicho) komunikat('POZIOM ' + poziom + ' / ' + POZ_N);
 }
 function ukonczPoziom() {
   lvl.faza = 'przerwa';
   const premia = lvl.przecieki === 0 ? 100 * runda : 0;
-  if (premia) { punkty += premia; ePunkty.textContent = punkty; }
+  if (premia) dodajPkt(premia);
   if (poziom < POZ_N) {
-    lvl.przerwa = 1.5; komunikat('POZIOM ' + poziom + ' UKOŃCZONY' + (premia ? ' · BEZ PRZECIEKÓW +' + premia : '')); dzw.poziom();
+    lvl.przerwa = 1.5; leczenie(15); komunikat('POZIOM ' + poziom + ' UKOŃCZONY' + (premia ? ' · BEZ PRZECIEKÓW +' + Math.round(premia * TR.punkty) : '')); dzw.poziom();
   } else if (runda < RUNDY_N) {
     lvl.przerwa = 3.4; runda++; poziom = 0; trud = (runda - 1) * POZ_N + 1;
-    if (zycia < 3) { zycia = 3; pokazZycia(); }
+    if (zycia < Math.min(3, TR.zycia)) { zycia = Math.min(3, TR.zycia); pokazZycia(); }
+    gracz.hp = HP_MAX; pokazHp();
     eFala.textContent = runda; pokazPoziom();
     baner('RUNDA ' + runda, NAZWY_RUND[runda - 1]); dzw.runda();
     zmienMotyw(runda - 1);
   } else {
-    lvl.przerwa = 2.4; lvl.final = true; baner('ZWYCIĘSTWO', 'Wybrzeże uratowane'); dzw.runda();
+    lvl.przerwa = 2.8; lvl.final = true; baner('GRATULACJE!', 'Wszyscy bossowie pokonani'); dzw.runda();
   }
 }
 function nastepnyPoziom() { poziom++; rozpocznijPoziom(); }
@@ -1049,11 +1159,7 @@ function zbudujCytadele() {
 }
 function modelWroga(typ) {
   if (WIEZE_DANE[typ]) return zbudujWieze(typ);
-  if (typ === 'boss') {
-    if (runda === 2) return zbudujSmiglowiec(0x5a4a2a, 0x8a1a1a);
-    if (runda >= 4) return zbudujCytadele();
-    const m = klonModelu('enemy_bombowiec'); przekolor(m, runda === 1 ? { Hull: 0x4a1a1a, Accent: 0xf2b134 } : { Hull: 0xcfeaff, Accent: 0x3ac8ff }); return m;
-  }
+  if (typ === 'boss') return klonModelu(BOSS_MODEL[runda - 1]);
   const pal = PALETA_WROGOW[runda - 1];
   if (typ === 'smiglowiec') return runda === 3 ? zbudujSmiglowiec(0xe2eaf2, 0x2f6aa0) : zbudujSmiglowiec(0x8c7a4a, 0x3c5a2a);
   const m = klonModelu(typ === 'kamikadze' ? 'enemy_zygzak' : typ === 'snajper' ? 'enemy_mysliwiec' : 'enemy_' + typ);
@@ -1082,8 +1188,9 @@ function dodajWroga(typ) {
     const hp = hpSk(3);
     w = { typ, x, y: -60 * S, vy: 0, hp, maxHp: hp, t: 0, pkt: 220, strzal: 1.0, przyg: 0 };
   } else if (typ === 'boss') {
-    const wv = runda - 1;
-    w = { typ, boss: true, wariant: wv, x: W / 2, y: -150 * S, vy: (wv === 3 ? 60 : 85) * S, hp: BOSS_HP[wv], maxHp: BOSS_HP[wv], t: 0, pkt: 2000 * runda, duzy: true, strzal: 1.8, cykl: 0, yCel: H * 0.26, dock: false, naziemny: wv === 3, kat: 0, px: BOSS_PX[wv], rr: BOSS_R[wv] };
+    const wv = runda - 1, D = BOSS_DANE[wv], hp = Math.max(1, Math.round(D.hp * TR.bossHp));
+    w = { typ, boss: true, wariant: wv, x: W / 2, y: -150 * S, vy: (D.naziemny ? 60 : 85) * S, hp, maxHp: hp, t: 0, pkt: 2000 * runda, duzy: true, strzal: 1.8, cykl: 0, yCel: H * 0.33, dock: false,
+      naziemny: !!D.naziemny, kat: 0, px: D.px, rr: D.hh, hw: D.hw * S, hh: D.hh * S, pancerz: 0, mnoz: 1, zn: [], czesci: [] };
   } else if (WIEZE_DANE[typ]) {
     const d = WIEZE_DANE[typ], hp = hpSk(d.hp); let xx = x;
     for (let i = 0; i < 6; i++) { xx = 50 * S + Math.random() * (W - 100 * S); if (!wrogowie.some((o) => o.naziemny && Math.abs(o.y + 70 * S) < 90 * S && Math.abs(o.x - xx) < 100 * S)) break; }
@@ -1091,14 +1198,16 @@ function dodajWroga(typ) {
   } else {
     const hp = hpSk(1);
     w = { typ: 'mysliwiec', x, y: -60 * S, vy: (110 + 3 * trud) * S, hp, maxHp: hp, t: 0, pkt: 100,
-      moze: trud >= 5 && Math.random() < Math.min(0.85, 0.15 + trud * 0.02), strzal: losuj(0.1, 0.8) };
+      moze: trud >= 5 && Math.random() < Math.min(0.9, (0.15 + trud * 0.02) * TR.ogien), strzal: losuj(0.1, 0.8) };
   }
   w.r = (w.rr || ROZ_R[w.typ]) * S; if (!w.px) w.px = PX_ENEMY[w.typ];
-  w.obj = new THREE.Group(); const m = modelWroga(w.typ); if (!w.naziemny) m.rotation.y = Math.PI; m.rotation.order = 'YXZ'; w.obj.add(m); w.model = m; w.wirnik = m.userData.wirnik || null; w.glowa = m.userData.glowa || null;
+  w.obj = new THREE.Group(); const m = modelWroga(w.typ); if (!w.naziemny) m.rotation.y = Math.PI; m.rotation.order = 'YXZ'; w.obj.add(m); w.model = m; w.wirnik = m.userData.wirnik || null; w.glowa = m.userData.glowa || m.getObjectByName('Glowa') || null;
   scene.add(w.obj);
+  if (w.boss) dodajCzesciBossa(w);
   wrogowie.push(w);
 }
 function celuj(x, y, v, odchylka, extra) { // pocisk wroga wycelowany w gracza
+  v *= TR.pocisk;
   const kat = Math.atan2(gracz.y - y, gracz.x - x) + (odchylka || 0);
   const p = { x, y, vx: Math.cos(kat) * v, vy: Math.sin(kat) * v };
   if (extra) Object.assign(p, extra);
@@ -1116,7 +1225,7 @@ function ruchSmiglowca(w, dt) {
   else if (w.faza === 'zawis') { // zawis w górnej części ekranu, wachlarz 3 pocisków
     w.czas -= dt; w.x = klamp(w.x0 + Math.sin(w.t * 0.8) * w.amp, 40 * S, W - 40 * S);
     w.strzal -= dt;
-    if (w.strzal <= 0) { w.strzal = 1.6 / MNOZNIK[runda - 1]; for (const o of [-0.22, 0, 0.22]) celuj(w.x, w.y + 24 * S, 200 * S * (1 + 0.05 * (runda - 1)), o); }
+    if (w.strzal <= 0) { w.strzal = 1.6 / og(); for (const o of [-0.22, 0, 0.22]) celuj(w.x, w.y + 24 * S, 200 * S * (1 + 0.05 * (runda - 1)), o); }
     if (w.czas <= 0) w.faza = 'odlot';
   } else w.y += w.vy * 1.3 * dt;
 }
@@ -1124,15 +1233,16 @@ function ruchSnajpera(w, dt) { // wolno schodzi, śledzi gracza w poziomie, strz
   w.y += (w.y < H * 0.12 ? 80 : 38) * S * dt;
   w.x = klamp(w.x + klamp(gracz.x - w.x, -1, 1) * 32 * S * dt, 30 * S, W - 30 * S);
   if (w.y < H * 0.08) return;
-  if (w.przyg > 0) { w.przyg -= dt; if (w.przyg <= 0) celuj(w.x, w.y + 22 * S, 250 * S, 0, { lod: true, kol: '#7fdcff' }); }
-  else { w.strzal -= dt; if (w.strzal <= 0 && w.y < H * 0.7) { w.przyg = 0.5; w.przygKol = 0x66ddff; w.strzal = 2.4 / MNOZNIK[runda - 1]; } }
+  if (w.przyg > 0) { w.przyg -= dt; if (w.przyg <= 0) celuj(w.x, w.y + 22 * S, 250 * S, 0, { lod: true, kol: '#7fdcff', dmg: DMG.lod }); }
+  else { w.strzal -= dt; if (w.strzal <= 0 && w.y < H * 0.7) { w.przyg = 0.5; w.przygKol = 0x66ddff; w.strzal = 2.4 / og(); } }
 }
 function kula(x, y, psi, v, extra) { // pocisk wroga pod kątem psi (0 = w prawo, π/2 = w dół ekranu)
+  v *= TR.pocisk;
   const p = { x, y, vx: Math.cos(psi) * v, vy: Math.sin(psi) * v };
   if (extra) Object.assign(p, extra);
   wrogiePociski.push(p); return p;
 }
-const rakieta = (x, y) => kula(x, y, Math.atan2(gracz.y - y, gracz.x - x), 140 * S, { nav: 1.8, zyje: 4.5, kol: '#ff9a2a', rozm: 1.5 });
+const rakieta = (x, y) => kula(x, y, Math.atan2(gracz.y - y, gracz.x - x), 140 * S, { nav: 1.8, zyje: 4.5, kol: '#ff9a2a', rozm: 1.5, dmg: DMG.rakieta });
 function celujGlowa(w, dt) { // głowica wieży płynnie śledzi gracza
   const cel = Math.atan2(gracz.x - w.x, gracz.y - w.y); let d = cel - w.kat; d = Math.atan2(Math.sin(d), Math.cos(d)); w.kat += d * Math.min(1, dt * 6);
 }
@@ -1150,32 +1260,152 @@ function ruchWiezy(w, dt) { // wieża stoi na podłożu: przesuwa się z tłem
   w.y += 60 * S * zwolnTla * dt; celujGlowa(w, dt);
   if (w.serie > 0) { w.serieT -= dt; if (w.serieT <= 0) { celuj(w.x, w.y + 10 * S, 215 * S); w.serie--; w.serieT = 0.14; } }
   w.strzal -= dt;
-  if (w.strzal <= 0 && w.y > 10 * S && w.y < H * 0.82) { w.strzal = WIEZE_DANE[w.typ].int / MNOZNIK[runda - 1] * losuj(0.85, 1.15); strzalWiezy(w); }
+  if (w.strzal <= 0 && w.y > 10 * S && w.y < H * 0.82) { w.strzal = WIEZE_DANE[w.typ].int / og() * losuj(0.85, 1.15); strzalWiezy(w); }
 }
-const BOSS_WZORY = [
-  (w) => { // Admirał: salwa celowana, co trzecia — szeroki wachlarz
-    if (++w.cykl % 3 === 0) { for (let i = -3; i <= 3; i++) kula(w.x, w.y + 40 * S, Math.PI / 2 + i * 0.2, 190 * S); w.strzal = 1.6; }
-    else { for (const o of [-0.2, 0, 0.2]) celuj(w.x, w.y + 40 * S, 210 * S, o); w.strzal = 1.3; }
-  },
-  (w) => { // Gunship Alfa: wachlarz 5 na przemian z podwójnym strzałem celowanym
-    if (++w.cykl % 2) { for (let i = -2; i <= 2; i++) kula(w.x, w.y + 30 * S, Math.PI / 2 + i * 0.28, 200 * S); w.strzal = 1.2; }
-    else { for (const o of [-0.08, 0.08]) celuj(w.x, w.y + 30 * S, 250 * S, o); w.strzal = 0.9; }
-  },
-  (w) => { // Lodowy Lewiatan: pocisk lodu, co trzecia salwa — pierścień wolnych pocisków
-    if (++w.cykl % 3 === 0) { for (let i = 0; i < 14; i++) kula(w.x, w.y + 30 * S, i / 14 * Math.PI * 2, 150 * S); w.strzal = 2.0; }
-    else { celuj(w.x, w.y + 40 * S, 230 * S, 0, { lod: true, kol: '#7fdcff' }); w.strzal = 1.6; }
-  },
-  (w) => { // Cytadela: spirala (po utracie połowy HP — podwójna) i rakiety
-    w.sp = (w.sp || 0) + 0.55; kula(w.x, w.y, w.sp, 170 * S); if (w.hp < w.maxHp * 0.5) kula(w.x, w.y, w.sp + Math.PI, 170 * S);
-    if (++w.cykl % 30 === 0) rakieta(w.x, w.y); w.strzal = 0.2;
-  },
-];
+// ---------- bossowie: każdy ma własną mechanikę (opis w BOSS_DANE, podpowiedź na pasku bossa w bossInfo) ----------
+const CZ_GEO = new THREE.SphereGeometry(1, 12, 8);
+const czescZywe = (w) => w.czesci.filter((c) => c.hp > 0);
+const bossProst = (w, x, y, r, sk) => Math.abs(x - w.x) < w.hw * (sk || 1) + r && Math.abs(y - w.y) < w.hh * (sk || 1) + r; // prostokątny korpus bossa
+const bossX = (w, a, om) => klamp(W / 2 + Math.sin(w.t * om) * W * a, w.hw + 12 * S, W - w.hw - 12 * S);
+function dodajCzesciBossa(w) { // części bossa (działa, generatory) jako osobne cele z własnym HP i widocznym znacznikiem
+  w.czesci = BOSS_DANE[w.wariant].czesci.map((c, i) => {
+    const hp = Math.max(1, Math.round(c.hp * TR.bossHp));
+    const m = new THREE.Mesh(CZ_GEO, new THREE.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.8, depthWrite: false, fog: false }));
+    m.position.set(c.dx / w.px, 0.5, c.dy / w.px); m.scale.setScalar(c.r / w.px); m.renderOrder = 3; w.obj.add(m);
+    return { dx: c.dx, dy: c.dy, r: c.r, hp, maxHp: hp, mesh: m, strzal: 0.8 + i * 0.7, trafiony: 0 };
+  });
+}
+function trafBossaPocisk(w, p) { // true, jeśli pocisk gracza coś trafił (najpierw części, potem korpus)
+  for (const c of w.czesci) if (c.hp > 0 && (p.x - (w.x + c.dx * S)) ** 2 + (p.y - (w.y + c.dy * S)) ** 2 < (c.r * S + 4 * S) ** 2) { trafCzesc(w, c, p.dmg); return true; }
+  if (bossProst(w, p.x, p.y, 4 * S)) { trafBossa(w, p.dmg, p); return true; }
+  return false;
+}
+function trafCzesc(w, c, dmg) {
+  c.hp -= dmg; c.trafiony = 0.08; dzw.traf();
+  if (c.hp > 0) return;
+  c.mesh.visible = false; wybuch(w.x + c.dx * S, w.y + c.dy * S, 1.4 * S); dzw.wybuch(false); dodajPkt(200); blysk = Math.max(blysk, 0.25);
+  const zostalo = czescZywe(w).length, razem = w.czesci.length;
+  komunikat(zostalo ? (w.wariant === 0 ? 'DZIAŁO ZNISZCZONE' : 'GENERATOR ZNISZCZONY ' + (razem - zostalo) + '/' + razem) : (w.wariant === 0 ? 'RDZEŃ ODSŁONIĘTY!' : 'REAKTOR ODSŁONIĘTY!'));
+  if (!zostalo) { w.strzal = 1.2; if (w.wariant === 3) w.laser = { faza: 'przerwa', t: 1.6, kat: Math.PI / 2, dir: 1 }; }
+}
+function trafBossa(w, dmg, p) {
+  const m = w.pancerz * (w.mnoz || 1);
+  if (m <= 0) { // pancerz: pocisk odbity
+    if (p) wybuch(p.x, p.y, 0.25 * S);
+    if (w.pkomT <= 0) { komunikat(w.wariant === 2 ? 'PANCERZ ZAMKNIĘTY!' : 'NIEZRANIALNY!'); w.pkomT = 1.2; }
+    return;
+  }
+  trafWroga(w, dmg * m);
+}
+function bossInfo(w) { // podpowiedź pod paskiem życia bossa
+  if (!w.dock) return 'Boss nadlatuje…';
+  const z = czescZywe(w).length;
+  switch (w.wariant) {
+    case 0: return z ? 'Działa skrzydłowe ' + z + '/2 — rdzeń opancerzony (20%)' : 'RDZEŃ ODSŁONIĘTY — strzelaj!';
+    case 1: return w.faza === 'ostrz' ? 'UNIK! Zjedź z czerwonego pasa' : w.faza === 'szarza' ? 'SZARŻA!' : w.faza === 'powrot' ? 'PRZEGRZANY ×2 — strzelaj!' : 'Patrol — wypatruj szarży';
+    case 2: return w.faza === 'otwarty' ? 'PANCERZ OTWARTY — strzelaj!' : 'Pancerz zamknięty — unikaj, nie strzelaj';
+    default: return z ? 'Generatory ' + z + '/4 — niszcz narożne kopuły' : w.laser && w.laser.faza === 'ostrz' ? 'LASER! Wyjdź z toru czerwonej linii' : w.laser && w.laser.faza === 'wiazka' ? 'LASER — uciekaj z toru!' : 'Reaktor odsłonięty — strzelaj!';
+  }
+}
+function pokazOpisBossa(wv) {
+  const D = BOSS_DANE[wv], b = el('boss-opis');
+  el('boss-opis-nazwa').textContent = D.nazwa; el('boss-opis-1').textContent = D.kr1; el('boss-opis-2').textContent = D.kr2;
+  b.hidden = false; odtworz(b, 'pokaz');
+}
+function bossAdmiral(w, dt, og0) { // działa skrzydłowe osłaniają rdzeń
+  w.x = bossX(w, 0.24, 0.5);
+  const zywe = czescZywe(w); w.pancerz = zywe.length ? 0.2 : 1;
+  for (const c of zywe) {
+    c.strzal -= dt * og0;
+    if (c.strzal <= 0) { c.strzal = 1.7; const cx = w.x + c.dx * S, cy = w.y + c.dy * S; for (const o of [-0.07, 0.07]) celuj(cx, cy + 10 * S, 230 * S, o, { dmg: 16 }); }
+  }
+  w.strzal -= dt * og0;
+  if (w.strzal <= 0) {
+    w.cykl++;
+    if (zywe.length) { celuj(w.x, w.y + 40 * S, 200 * S, 0, { dmg: 14 }); w.strzal = 2.6; }
+    else if (w.cykl % 2) { for (let i = -3; i <= 3; i++) kula(w.x, w.y + 40 * S, Math.PI / 2 + i * 0.2, 190 * S, { dmg: 14 }); w.strzal = 1.5; }
+    else { for (const o of [-0.2, 0, 0.2]) celuj(w.x, w.y + 40 * S, 220 * S, o, { dmg: 16 }); w.strzal = 1.2; }
+  }
+}
+function bossGunship(w, dt, og0) { // patrol -> ostrzeżenie (czerwony pas) -> szarża -> przegrzanie (×2 obrażeń)
+  w.pancerz = 1; w.mnoz = 1; w.fazaT -= dt;
+  const pas = (a) => w.zn.push({ x: w.x, y: w.y + (H - w.y) / 2, dl: H - w.y + 60 * S, sz: w.hw * 2, kat: Math.PI / 2, tryb: 'ostrz', a });
+  if (w.faza === 'patrol') {
+    w.x = bossX(w, 0.3, 0.7); w.y += (w.yCel - w.y) * Math.min(1, dt * 3);
+    w.strzal -= dt * og0;
+    if (w.strzal <= 0) {
+      if (++w.cykl % 2) { for (let i = -2; i <= 2; i++) kula(w.x, w.y + 40 * S, Math.PI / 2 + i * 0.28, 200 * S, { dmg: 14 }); w.strzal = 1.3; }
+      else { for (const o of [-0.08, 0.08]) celuj(w.x, w.y + 40 * S, 250 * S, o, { dmg: 16 }); w.strzal = 0.9; }
+    }
+    if (w.fazaT <= 0) { w.faza = 'ostrz'; w.fazaT = 1.3 * TR.ostrz; komunikat('UWAGA — SZARŻA!'); dzw.alarm(); }
+  } else if (w.faza === 'ostrz') {
+    w.przyg = w.fazaT; w.przygKol = 0xff3030;
+    if (w.fazaT > 0.45 * TR.ostrz) w.x += (klamp(gracz.x, w.hw, W - w.hw) - w.x) * Math.min(1, dt * 4); // namierza gracza, tuż przed szarżą blokuje tor
+    pas(0.3 + 0.25 * Math.sin(w.t * 25));
+    if (w.fazaT <= 0) { w.faza = 'szarza'; w.przyg = 0; }
+  } else if (w.faza === 'szarza') {
+    w.y += 640 * S * TR.pocisk * dt; pas(0.55);
+    if (w.y >= H * 0.8) { w.faza = 'powrot'; w.fazaT = 3.4 * TR.okno; komunikat('PRZEGRZANY — STRZELAJ!'); }
+  } else { // powrót: przegrzany, przyjmuje podwójne obrażenia
+    w.mnoz = 2; w.y -= ((H * 0.8 - w.yCel) / (3.4 * TR.okno)) * dt; w.x += (W / 2 - w.x) * Math.min(1, dt * 0.8);
+    if (w.fazaT <= 0 || w.y <= w.yCel) { w.faza = 'patrol'; w.fazaT = 5.5 * (2 - TR.okno); w.strzal = 0.8; }
+  }
+}
+function bossLewiatan(w, dt, og0) { // pancerz zamknięty (nietykalny) <-> otwarty (podatny)
+  w.mnoz = 1; w.fazaT -= dt;
+  const pierscien = (v) => { const f0 = Math.random() * 6.28; for (let i = 0; i < 14; i++) if (i % 5 !== 0) kula(w.x, w.y + 30 * S, f0 + i / 14 * Math.PI * 2, v * S, { dmg: 12 }); };
+  if (w.faza === 'zamkniety') {
+    w.pancerz = 0; w.x = bossX(w, 0.22, 0.45);
+    w.strzal -= dt * og0;
+    if (w.strzal <= 0) { celuj(w.x, w.y + 40 * S, 230 * S, 0, { lod: true, kol: '#7fdcff', dmg: 8 }); w.strzal = 1.7; }
+    if (w.fazaT < 0.9 && !w.zapowiedz) { w.zapowiedz = true; w.przyg = 0.9; w.przygKol = 0x66ddff; komunikat('PANCERZ SIĘ OTWIERA!'); dzw.alarm(); }
+    if (w.fazaT <= 0) { w.faza = 'otwarty'; w.fazaT = 3.2 * TR.okno; w.zapowiedz = false; pierscien(140); }
+  } else {
+    w.pancerz = 1; w.x += (W / 2 - w.x) * Math.min(1, dt * 0.6);
+    if (w.fazaT <= 0) { w.faza = 'zamkniety'; w.fazaT = 4.6 / TR.okno; w.strzal = 0.8; komunikat('PANCERZ ZAMKNIĘTY'); pierscien(120); }
+  }
+}
+function laserCytadeli(w, dt) { // obrotowa wiązka: cienka linia ostrzega, potem omiata ekran
+  const L = w.laser; L.t -= dt;
+  const dl = H * 1.5, lin = (kat, sz, tryb, a) => ({ x: w.x + Math.cos(kat) * dl / 2, y: w.y + Math.sin(kat) * dl / 2, dl, sz, kat, tryb, a });
+  if (L.faza === 'przerwa') {
+    if (L.t <= 0) { L.faza = 'ostrz'; L.t = 1.4 * TR.ostrz; L.kat = klamp(Math.atan2(gracz.y - w.y, gracz.x - w.x), 0.4, Math.PI - 0.4); L.dir = Math.random() < 0.5 ? -1 : 1; komunikat('LASER — WYJDŹ Z TORU!'); dzw.alarm(); }
+  } else if (L.faza === 'ostrz') {
+    w.zn.push(lin(L.kat, 3 * S, 'ostrz', 0.5 + 0.4 * Math.sin(w.t * 30)));
+    if (L.t <= 0) { L.faza = 'wiazka'; L.t = 2.8; dzw.blyskawica(); }
+  } else {
+    L.kat += L.dir * 0.5 * dt; if (L.kat < 0.4 || L.kat > Math.PI - 0.4) { L.dir = -L.dir; L.kat = klamp(L.kat, 0.4, Math.PI - 0.4); }
+    w.zn.push(lin(L.kat, 26 * S, 'wiazka', 0.9));
+    const dx = gracz.x - w.x, dy = gracz.y - w.y, along = dx * Math.cos(L.kat) + dy * Math.sin(L.kat), perp = Math.abs(-dx * Math.sin(L.kat) + dy * Math.cos(L.kat));
+    if (along > 0 && perp < 13 * S + profil.r * S * 0.5) obrazenia(DMG.laser);
+    if (L.t <= 0) { L.faza = 'przerwa'; L.t = 2.6; }
+  }
+}
+function bossCytadela(w, dt, og0) { // generatory osłaniają reaktor; po ich zniszczeniu — laser
+  w.mnoz = 1; w.x = W / 2; celujGlowa(w, dt);
+  const zywe = czescZywe(w), n = zywe.length; w.pancerz = [1, 0.75, 0.5, 0.3, 0.15][n];
+  for (const c of zywe) { c.strzal -= dt * og0; if (c.strzal <= 0) { c.strzal = 2.6; celuj(w.x + c.dx * S, w.y + c.dy * S, 200 * S, 0, { dmg: 16 }); } }
+  w.strzal -= dt * og0;
+  if (w.strzal <= 0) {
+    w.sp = (w.sp || 0) + 0.55; kula(w.x, w.y, w.sp, 150 * S, { dmg: 10 }); if (n <= 2) kula(w.x, w.y, w.sp + Math.PI, 150 * S, { dmg: 10 });
+    w.strzal = n ? 0.26 : 0.34; if (++w.cykl % 24 === 0) rakieta(w.x, w.y);
+  }
+  if (n === 0 && w.laser) laserCytadeli(w, dt);
+}
 function ruchBossa(w, dt) {
-  if (!w.dock) { w.y += w.vy * dt; if (w.y >= w.yCel) { w.dock = true; w.t = 0; } return; }
-  w.x = w.wariant === 3 ? W / 2 : W / 2 + Math.sin(w.t * 0.55) * W * 0.28;
-  if (w.wariant === 3) celujGlowa(w, dt);
-  w.strzal -= dt * (w.hp < w.maxHp * 0.5 ? 1.35 : 1);
-  if (w.strzal <= 0) BOSS_WZORY[w.wariant](w);
+  w.pkomT = Math.max(0, (w.pkomT || 0) - dt); w.zn = [];
+  if (w.przyg > 0 && w.wariant !== 1) w.przyg -= dt;
+  if (!w.dock) { // wlot: boss jest nietykalny
+    w.pancerz = 0; w.y += w.vy * dt;
+    if (w.y >= w.yCel) {
+      w.dock = true; w.t = 0;
+      if (w.wariant === 1) { w.faza = 'patrol'; w.fazaT = 4; w.strzal = 0.8; }
+      if (w.wariant === 2) { w.faza = 'zamkniety'; w.fazaT = 4.6 / TR.okno; w.strzal = 0.8; }
+    }
+    return;
+  }
+  const og0 = TR.ogien * (w.hp < w.maxHp * TR.wscieklosc ? 1.35 : 1); // szał po utracie części zdrowia
+  [bossAdmiral, bossGunship, bossLewiatan, bossCytadela][w.wariant](w, dt, og0);
 }
 function ruchWroga(w, dt) {
   w.t += dt;
@@ -1189,12 +1419,12 @@ function ruchWroga(w, dt) {
   else if (w.typ === 'bombowiec') {
     w.strzal -= dt;
     if (w.strzal <= 0 && w.y > 0 && w.y < H * 0.7) {
-      w.strzal = Math.max(0.6, (1.6 - trud * 0.03) / MNOZNIK[runda - 1]);
+      w.strzal = Math.max(0.6, (1.6 - trud * 0.03) / og());
       celuj(w.x, w.y + 30 * S, 190 * S * (1 + 0.05 * (runda - 1)));
     }
   } else if (w.typ === 'mysliwiec' && w.moze) {
     w.strzal -= dt;
-    if (w.strzal <= 0 && w.y > H * 0.15 && w.y < H * 0.75) { w.moze = false; wrogiePociski.push({ x: w.x, y: w.y + 20 * S, vx: 0, vy: 260 * S }); }
+    if (w.strzal <= 0 && w.y > H * 0.15 && w.y < H * 0.75) { w.moze = false; wrogiePociski.push({ x: w.x, y: w.y + 20 * S, vx: 0, vy: 260 * S * TR.pocisk }); }
   }
 }
 function wybuch(x, y, wielkosc) {
@@ -1204,33 +1434,36 @@ function wybuch(x, y, wielkosc) {
     wybuchy.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, max: 0.4 + Math.random() * 0.45, r: (3 + Math.random() * 6) * wielkosc });
   }
 }
-function trafienieGracza() {
-  if (gracz.niezniszczalny > 0 || gracz.tarcza > 0) return;
-  gracz.bron = Math.max(1, gracz.bron - 1); gracz.szybki = 0; gracz.niezniszczalny = 1.2;
-  strataZycia();
+function obrazenia(d, omin) { // trafienie zabiera część paska życia; po jego wyczerpaniu tracisz życie
+  if (stan !== 'gra') return;
+  if (!omin && (gracz.tarcza > 0 || gracz.niezniszczalny > 0)) return;
+  gracz.hp -= Math.max(1, Math.round(d * TR.obr)); odtworz(el('alarm'), 'pokaz');
+  if (gracz.hp <= 0) { strataZycia(); return; }
+  gracz.niezniszczalny = Math.max(gracz.niezniszczalny, TR.iframe); dzw.oberwal(); pokazHp();
 }
-function trafLodem() { // pocisk lodowy: spowolnienie na 2,5 s; kolejny trafiony w trakcie = zwykłe trafienie
+function trafLodem(d) { // pocisk lodowy: małe obrażenia + spowolnienie na 2,5 s
   if (gracz.niezniszczalny > 0 || gracz.tarcza > 0) return;
-  if (gracz.lod > 0) { trafienieGracza(); return; }
-  gracz.lod = 2.5; komunikat('ZAMARZNIĘTY!'); dzw.lod();
+  if (gracz.lod <= 0) { gracz.lod = 2.5; komunikat('ZAMARZNIĘTY!'); dzw.lod(); }
+  obrazenia(d || DMG.lod);
 }
 function strataZycia() {
   zycia--; pokazZycia(); dzw.gracz();
   wybuch(gracz.x, gracz.y, 1.4 * S);
-  if (zycia <= 0) koniec(false);
+  if (zycia <= 0) { gracz.hp = 0; pokazHp(); koniec(false); return; }
+  gracz.hp = HP_MAX; pokazHp(); gracz.bron = Math.max(1, gracz.bron - 1); gracz.szybki = 0; gracz.niezniszczalny = 2; komunikat('UTRACONE ŻYCIE');
 }
 function przeciek() { // wróg przeleciał dolną krawędzią
   punkty = Math.max(0, punkty - 25); ePunkty.textContent = punkty;
   lvl.przecieki++; odtworz(el('alarm'), 'pokaz'); dzw.alarm();
-  if (lvl.przecieki >= PRZECIEKI_MAX) { lvl.przecieki = 0; komunikat('LINIA OBRONY PRZEŁAMANA'); strataZycia(); }
-  else komunikat('PRZELECIAŁ! ' + lvl.przecieki + ' / ' + PRZECIEKI_MAX);
+  if (lvl.przecieki >= TR.przecieki) { lvl.przecieki = 0; komunikat('LINIA OBRONY PRZEŁAMANA'); obrazenia(DMG.przeciek, true); }
+  else komunikat('PRZELECIAŁ! ' + lvl.przecieki + ' / ' + TR.przecieki);
   pokazPrzecieki();
 }
 const kolizja = (a, b, ra, rb) => { const dx = a.x - b.x, dy = a.y - b.y; return dx * dx + dy * dy < (ra + rb) * (ra + rb); };
 
 // ---------- bonusy (Battle City: migające kafelki z ikonami) ----------
 const BONUSY = {
-  gwiazda: { kol: '#f2b134', waga: 26 }, tarcza: { kol: '#4aa8ff', waga: 14 }, zycie: { kol: '#3ecf6b', waga: 0 }, // 1UP tylko za pokonanie bossa
+  gwiazda: { kol: '#f2b134', waga: 26 }, tarcza: { kol: '#4aa8ff', waga: 14 }, naprawa: { kol: '#ff5a7a', waga: 16 }, zycie: { kol: '#3ecf6b', waga: 0 }, // 1UP tylko za pokonanie bossa
   bomba: { kol: '#e0483c', waga: 5 }, zegar: { kol: '#8fe3ff', waga: 7 }, blyskawica: { kol: '#ffe14a', waga: 12 },
 };
 const IKONY = {
@@ -1240,6 +1473,7 @@ const IKONY = {
     c.beginPath(); [[0, -9], [2, -3], [9, 2], [9, 4], [2, 2], [2, 5], [5, 7], [-5, 7], [-2, 5], [-2, 2], [-9, 4], [-9, 2], [-2, -3]].forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); c.fill();
     c.font = 'bold 7px sans-serif'; c.textAlign = 'center'; c.fillText('1UP', 0, 10);
   },
+  naprawa(c) { c.beginPath(); c.rect(-3.2, -9, 6.4, 18); c.rect(-9, -3.2, 18, 6.4); c.fill(); },
   bomba(c) { c.beginPath(); c.arc(0, 3, 7.5, 0, Math.PI * 2); c.fill(); c.lineWidth = 2; c.beginPath(); c.moveTo(3, -3); c.quadraticCurveTo(7, -6, 7, -10); c.stroke(); },
   zegar(c) { c.lineWidth = 2.5; c.beginPath(); c.arc(0, 0, 8.5, 0, Math.PI * 2); c.stroke(); c.beginPath(); c.moveTo(0, -5); c.lineTo(0, 0); c.lineTo(4, 2); c.stroke(); },
   blyskawica(c) { c.beginPath(); [[3, -10], [-5, 1], [-0.5, 1], [-3, 10], [6, -2], [1, -2]].forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); c.fill(); },
@@ -1266,7 +1500,7 @@ for (const img of document.querySelectorAll('img[data-ikona]')) img.src = ikonaC
 
 function losujBonus() {
   let suma = 0; const w = {};
-  for (const k in BONUSY) { w[k] = BONUSY[k].waga * (k === 'gwiazda' && gracz.bron >= 4 ? 0.3 : 1); suma += w[k]; }
+  for (const k in BONUSY) { w[k] = BONUSY[k].waga * (k === 'gwiazda' && gracz.bron >= 4 ? 0.3 : k === 'naprawa' ? (gracz.hp < HP_MAX * 0.7 ? 2.2 : gracz.hp < HP_MAX ? 1 : 0.3) : 1); suma += w[k]; }
   let r = Math.random() * suma;
   for (const k in w) { r -= w[k]; if (r <= 0) return k; }
   return 'gwiazda';
@@ -1278,11 +1512,12 @@ function nowyBonus(x, y, typ) {
   bonusy.push({ typ, x, y, x0: x, vy: 95 * S, t: 0, spr, glow });
 }
 function podniesBonus(b) {
-  punkty += 50; ePunkty.textContent = punkty;
+  dodajPkt(50);
   switch (b.typ) {
     case 'gwiazda': if (gracz.bron < 4) gracz.bron++; komunikat('BROŃ: ' + BRONIE[gracz.bron - 1].nazwa); dzw.bron(); break;
     case 'tarcza': gracz.tarcza = 5; komunikat('OSŁONA'); dzw.tarcza(); break;
-    case 'zycie': if (zycia < ZYCIA_MAX) { zycia++; pokazZycia(); komunikat('+1 ŻYCIE'); } else { punkty += 300; ePunkty.textContent = punkty; komunikat('+300 PKT'); } dzw.zycie(); break;
+    case 'naprawa': leczenie(40); komunikat('NAPRAWA +40'); dzw.zycie(); break;
+    case 'zycie': if (zycia < TR.zyciaMax) { zycia++; pokazZycia(); komunikat('+1 ŻYCIE'); } else { dodajPkt(300); komunikat('+300 PKT'); } leczenie(HP_MAX); dzw.zycie(); break;
     case 'bomba': komunikat('BOMBA!'); bomba(); break;
     case 'zegar': zamroz = 3; komunikat('WROGOWIE ZAMROŻENI'); dzw.zegar(); break;
     case 'blyskawica': gracz.szybki = 10; komunikat('SZYBKI OGIEŃ'); dzw.blyskawica(); break;
@@ -1290,11 +1525,13 @@ function podniesBonus(b) {
 }
 function bomba() {
   dzw.bomba(); blysk = 1;
-  for (const w of wrogowie) if (!w.zniszczony) trafWroga(w, w.boss ? 12 : 8, true);
+  for (const w of wrogowie) if (!w.zniszczony) {
+    if (w.boss) { for (const c of w.czesci) if (c.hp > 0) trafCzesc(w, c, 10); if (!w.zniszczony) trafBossa(w, 12); } else trafWroga(w, 8, true);
+  }
   wrogiePociski = [];
 }
 function mozeDropic(w) { // bonusy rzadkie: odstęp 12 s, maks. 3 na poziom, gwarancja jednego w połowie poziomu
-  if (bonusCd > 0 || lvl.bonusyPoz >= 3 || lvl.faza !== 'walka') return false;
+  if (bonusCd > 0 || lvl.bonusyPoz >= TR.bonusMax || lvl.faza !== 'walka') return false;
   if (Math.random() < (ELITA.has(w.typ) ? 0.5 : 0.1)) return true;
   return lvl.bonusyPoz === 0 && lvl.ile > 0 && lvl.zabitePoz >= lvl.ile * 0.5;
 }
@@ -1302,17 +1539,18 @@ function trafWroga(w, dmg, cichy) {
   w.hp -= dmg; w.trafiony = 0.08;
   if (!cichy) dzw.traf();
   if (w.hp > 0) return;
-  w.zniszczony = true; punkty += w.pkt; zabite++; lvl.zabitePoz++; ePunkty.textContent = punkty;
+  w.zniszczony = true; dodajPkt(w.pkt); zabite++; lvl.zabitePoz++;
   wybuch(w.x, w.y, (w.duzy ? 1.8 : 1) * S);
   if (!cichy || Math.random() < 0.35) dzw.wybuch(!!w.duzy);
   if (w.boss) { bossPokonany(w); return; }
-  if (mozeDropic(w)) { nowyBonus(w.x, w.y); lvl.bonusyPoz++; bonusCd = 12; }
+  if (mozeDropic(w)) { nowyBonus(w.x, w.y); lvl.bonusyPoz++; bonusCd = TR.bonusCd; }
 }
 function bossPokonany(w) {
   lvl.zostalo = 0; wrogiePociski = []; blysk = 1; dzw.bomba();
   for (const o of wrogowie) if (o !== w && !o.zniszczony) { o.zniszczony = true; wybuch(o.x, o.y, (o.duzy ? 1.8 : 1) * S); }
   for (const dx of [-60, 60]) wybuch(w.x + dx * S, w.y + 20 * S, 2.4 * S);
-  nowyBonus(w.x - 34 * S, w.y, zycia < ZYCIA_MAX ? 'zycie' : 'tarcza'); nowyBonus(w.x + 34 * S, w.y, 'gwiazda');
+  lvl.boom = { x: w.x, y: w.y, hw: w.hw, hh: w.hh, t: 1.8, n: 0 }; el('boss-opis').hidden = true;
+  nowyBonus(w.x - 34 * S, w.y, zycia < TR.zyciaMax ? 'zycie' : 'naprawa'); nowyBonus(w.x + 34 * S, w.y, 'gwiazda');
   ukonczPoziom();
 }
 
@@ -1357,7 +1595,7 @@ function krok(dt) {
     gracz.y += (gracz.cel.y - gracz.y) * Math.min(1, dt * 14 * mz);
   }
   gracz.x = klamp(gracz.x, 30 * S, W - 30 * S);
-  gracz.y = klamp(gracz.y, H * 0.3, H - 60 * S);
+  gracz.y = klamp(gracz.y, H * (lvl.boss && lvl.faza === 'walka' ? 0.46 : 0.3), H - 60 * S); // w walce z bossem pole gracza jest niższe
   gracz.vx = dt > 0 ? (gracz.x - px0) / dt : 0;
   gracz.niezniszczalny = Math.max(0, gracz.niezniszczalny - dt);
   gracz.szybki = Math.max(0, gracz.szybki - dt);
@@ -1376,17 +1614,23 @@ function krok(dt) {
   }
   for (const w of wrogowie) {
     if (!(zam && !w.boss)) ruchWroga(w, dt);
-    for (const p of pociski) if (!p.zuzyty && !w.zniszczony && kolizja(p, w, 4 * S, w.r)) { p.zuzyty = true; trafWroga(w, p.dmg); }
+    for (const p of pociski) {
+      if (p.zuzyty || w.zniszczony) continue;
+      if (w.boss) { if (trafBossaPocisk(w, p)) p.zuzyty = true; }
+      else if (kolizja(p, w, 4 * S, w.r)) { p.zuzyty = true; trafWroga(w, p.dmg); }
+    }
     if (w.trafiony) w.trafiony = Math.max(0, w.trafiony - dt);
-    if (!w.zniszczony && !w.naziemny && kolizja(w, gracz, w.r * 0.8, profil.r * S)) {
-      if (!w.boss) { w.zniszczony = true; wybuch(w.x, w.y, S); dzw.wybuch(false); }
-      trafienieGracza();
+    if (w.czesci) for (const c of w.czesci) if (c.trafiony) c.trafiony = Math.max(0, c.trafiony - dt);
+    if (!w.zniszczony && !w.naziemny) {
+      if (w.boss) { if (bossProst(w, gracz.x, gracz.y, profil.r * S * 0.6, 0.8)) obrazenia(DMG.bossZderzenie); }
+      else if (kolizja(w, gracz, w.r * 0.8, profil.r * S)) { w.zniszczony = true; wybuch(w.x, w.y, S); dzw.wybuch(false); obrazenia(DMG.zderzenie); }
     }
   }
   for (const w of wrogowie) if (!w.zniszczony && (w.y - w.r > H + 60 * S || w.x < -140 * S || w.x > W + 140 * S || w.y < -400 * S)) { w.zniszczony = true; if (!w.naziemny && !w.boss && w.y > H * 0.5) przeciek(); }
   for (const w of wrogowie) if (w.zniszczony) usun(w.obj);
   wrogowie = wrogowie.filter((w) => !w.zniszczony);
   if (stan !== 'gra') return;
+  if (lvl.boom) { const b = lvl.boom; b.t -= dt; b.n -= dt; if (b.n <= 0) { b.n = 0.11; wybuch(b.x + losuj(-b.hw, b.hw), b.y + losuj(-b.hh, b.hh), 1.3 * S); if (Math.random() < 0.5) dzw.wybuch(false); } if (b.t <= 0) lvl.boom = null; }
   if (lvl.faza === 'walka') { if (!lvl.boss && lvl.zostalo === 0 && !wrogowie.length) ukonczPoziom(); }
   else if (lvl.faza === 'przerwa') { lvl.przerwa -= dt; if (lvl.przerwa <= 0) { if (lvl.final) koniec(true); else nastepnyPoziom(); } }
 
@@ -1398,7 +1642,7 @@ function krok(dt) {
     }
     if (p.zyje != null && (p.zyje -= dt) <= 0) p.zuzyty = true;
     p.x += p.vx * dt; p.y += p.vy * dt;
-    if (kolizja(p, gracz, 4 * S, (profil.r - 1) * S)) { p.zuzyty = true; if (p.lod) trafLodem(); else trafienieGracza(); }
+    if (kolizja(p, gracz, 4 * S, (profil.r - 1) * S)) { p.zuzyty = true; if (p.lod) trafLodem(p.dmg); else obrazenia(p.dmg || DMG.pocisk); }
   }
   wrogiePociski = wrogiePociski.filter((p) => !p.zuzyty && p.y < H + 20 && p.y > -20 && p.x > -20 && p.x < W + 20);
 
@@ -1419,7 +1663,10 @@ const pociskMat = {};
 const wrogPociskGeo = new THREE.SphereGeometry(0.22, 10, 8);
 const wrogPociskMat = new THREE.MeshBasicMaterial({ color: 0xff7a6b });
 const wpMaty = {}, wpMat = (kol) => wpMaty[kol] || (wpMaty[kol] = new THREE.MeshBasicMaterial({ color: new THREE.Color(kol) }));
-const pulaP = [], pulaWP = [];
+const pulaP = [], pulaWP = [], pulaZn = [];
+const znGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+const znMatOstrz = new THREE.MeshBasicMaterial({ color: 0xff2a2a, transparent: true, opacity: 0.35, depthWrite: false, fog: false });
+const znMatWiazka = new THREE.MeshBasicMaterial({ color: 0xff8a40, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
 function sync(pula, dane, mk, upd) {
   while (pula.length < dane.length) { const m = mk(); scene.add(m); pula.push(m); }
   for (let i = 0; i < dane.length; i++) { pula[i].visible = true; upd(pula[i], dane[i]); }
@@ -1470,10 +1717,20 @@ function render3D(dt) {
     w.model.rotation.z = roll;
     if (w.typ === 'kamikadze') w.obj.rotation.y = w.kat;
     if (w.wirnik) w.wirnik.rotation.y = czas * 25;
-    if (w.trafiony > 0) swiecenie(w.obj, 0xffffff, 0.9);
+    if (w.trafiony > 0) swiecenie(w.obj, 0xffffff, w.boss ? 0.3 : 0.9);
     else if (w.przyg > 0 && Math.floor(czas * 14) % 2) swiecenie(w.obj, w.przygKol, 0.9);
-    else if (zamroz > 0) swiecenie(w.obj, 0x66ddff, 0.5); else swiecenie(w.obj, 0x000000, 0);
+    else if (w.boss && w.dock && w.wariant === 2) swiecenie(w.obj, w.faza === 'otwarty' ? 0x33ddff : 0x1a3a66, w.faza === 'otwarty' ? 0.5 + 0.4 * Math.sin(czas * 8) : 0.35);
+    else if (w.boss && w.faza === 'powrot') swiecenie(w.obj, 0xff3a0a, 0.28 + 0.15 * Math.sin(czas * 10));
+    else if (zamroz > 0 && !w.boss) swiecenie(w.obj, 0x66ddff, 0.5); else swiecenie(w.obj, 0x000000, 0);
+    if (w.czesci) for (const c of w.czesci) if (c.hp > 0) { c.mesh.material.opacity = 0.55 + 0.3 * Math.sin(czas * 6); c.mesh.material.color.setHex(c.trafiony > 0 ? 0xffffff : 0xff7a1a); }
   }
+
+  // znaczniki bossów: czerwony pas szarży, linia i wiązka lasera
+  const zn = []; for (const w of wrogowie) if (w.zn) for (const z of w.zn) zn.push(z);
+  sync(pulaZn, zn, () => new THREE.Mesh(znGeo, znMatOstrz), (m, z) => {
+    const q = ground(z.x, z.y, 0.45); m.position.set(q.x, 0.45, q.z); m.scale.set(z.dl * K0, 1, z.sz * K0); m.rotation.y = -z.kat;
+    m.material = z.tryb === 'wiazka' ? znMatWiazka : znMatOstrz; if (z.tryb !== 'wiazka') m.material.opacity = z.a;
+  });
 
   // pociski
   sync(pulaP, pociski, () => new THREE.Mesh(pociskGeo, pociskMat.x || (pociskMat.x = new THREE.MeshBasicMaterial({ color: 0xffffff }))), (m, p) => {
@@ -1514,10 +1771,10 @@ let hudSig = '', bossSig = '';
 function hud() {
   const sig = gracz.bron;
   if (sig !== hudSig) { hudSig = sig; el('hud-bron-nazwa').textContent = BRONIE[gracz.bron - 1].nazwa; el('hud-pips').innerHTML = [1, 2, 3, 4].map((i) => '<span class="pip' + (i <= gracz.bron ? ' on' : '') + '"></span>').join(''); }
-  const bs = wrogowie.find((w) => w.boss), bsig = bs ? bs.wariant + ':' + Math.max(0, Math.ceil(100 * bs.hp / bs.maxHp)) : '';
+  const bs = wrogowie.find((w) => w.boss), binfo = bs ? bossInfo(bs) : '', bsig = bs ? bs.wariant + ':' + Math.max(0, Math.ceil(100 * bs.hp / bs.maxHp)) + ':' + binfo : '';
   if (bsig !== bossSig) {
     bossSig = bsig; el('boss').hidden = !bs;
-    if (bs) { el('boss-nazwa').textContent = NAZWY_BOSSOW[bs.wariant]; el('boss-pasek').style.width = Math.max(0, 100 * bs.hp / bs.maxHp).toFixed(1) + '%'; }
+    if (bs) { el('boss-nazwa').textContent = NAZWY_BOSSOW[bs.wariant]; el('boss-pasek').style.width = Math.max(0, 100 * bs.hp / bs.maxHp).toFixed(1) + '%'; el('boss-info').textContent = binfo; }
   }
   for (const [id, ile, max] of [['tarcza', gracz.tarcza, 5], ['blyskawica', gracz.szybki, 10], ['zegar', zamroz, 3]]) {
     const b = el('buff-' + id); b.hidden = ile <= 0;
@@ -1532,15 +1789,15 @@ function petla(t) {
   renderer.render(scene, camera);
   requestAnimationFrame(petla);
 }
-zbudujWybor(); muzEtykiety(); rozmiar(); pokazZycia();
+zbudujWybor(); zbudujTrudnosc(); zbudujBossy(); muzEtykiety(); rozmiar(); pokazZycia(); pokazHp();
 requestAnimationFrame(petla);
 window.__eskadraOK = true;
 window.__eskadra = {
-  start, pauza, dodajWroga, get stan() { return stan; }, get wrogowie() { return wrogowie; }, get gracz() { return gracz; }, get lvl() { return lvl; },
-  get info() { return { runda, poziom, trud, zycia, punkty, zabite, bonusy: bonusy.length, wrogiePociski: wrogiePociski.length }; },
+  start, pauza, dodajWroga, ustawTrudnosc, obrazenia, get TR() { return TR; }, get S() { return S; }, get stan() { return stan; }, get wrogowie() { return wrogowie; }, get gracz() { return gracz; }, get lvl() { return lvl; },
+  get info() { return { runda, poziom, trud, zycia, hp: gracz.hp, punkty, zabite, bonusy: bonusy.length, wrogiePociski: wrogiePociski.length }; },
   traf(w, d) { trafWroga(w, d); },
   symuluj(sek, dt = 1 / 60, bot) { for (let t = 0; t < sek && stan === 'gra'; t += dt) { if (bot) bot(gracz, wrogowie, wrogiePociski, bonusy); krok(dt); } },
-  skocz(r, p) { wyczyscSwiat(); runda = r; poziom = p; eFala.textContent = r; zmienMotyw(r - 1, true); gracz.niezniszczalny = 1.5; rozpocznijPoziom(true); },
+  skocz(r, p) { wyczyscSwiat(); zycia = TR.zycia; pokazZycia(); runda = r; poziom = p; eFala.textContent = r; zmienMotyw(r - 1, true); gracz.niezniszczalny = 1.5; rozpocznijPoziom(true); },
 };
 </script>
 </body>
