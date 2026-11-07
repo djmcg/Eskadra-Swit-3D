@@ -1,0 +1,451 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Eskadra Świt 2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Saira+Condensed:wght@500;700&display=swap">
+<style>
+  /* Pionowa strzelanka na cały ekran: morze przewija się w dół, panel stanu u góry. Jeden świadomy wygląd (morze o świcie). */
+  :root {
+    --morze: #12456b;
+    --morze-jasne: #1d6a96;
+    --tekst: #f4efe1;
+    --tekst-cichy: rgba(244, 239, 225, 0.72);
+    --akcent: #f2b134;
+    --wrog: #c8463c;
+    --karta: rgba(9, 30, 48, 0.88);
+    --font-tytul: "Black Ops One", Impact, "Arial Black", sans-serif;
+    --font-tekst: "Saira Condensed", "Arial Narrow", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--morze);
+    color: var(--tekst);
+    font-family: var(--font-tekst);
+    overflow: hidden;
+    -webkit-user-select: none; user-select: none;
+    touch-action: none;
+  }
+  .scena { position: relative; height: 100%; width: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .panel {
+    position: absolute; left: 0; right: 0;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    pointer-events: none;
+    font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  }
+  .panel .blok { display: flex; flex-direction: column; gap: 0; }
+  .panel .etyk { font-size: 13px; color: var(--tekst-cichy); }
+  .panel .wart { font-family: var(--font-tytul); font-size: 26px; font-variant-numeric: tabular-nums; line-height: 1.05; }
+  .panel .prawo { text-align: right; align-items: flex-end; }
+  .zycia { font-size: 22px; letter-spacing: 0.15em; color: var(--akcent); }
+  .nakladka {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .karta {
+    background: var(--karta);
+    border: 1px solid rgba(242, 177, 52, 0.35);
+    border-radius: 18px;
+    padding: 24px 26px 26px;
+    max-width: 360px; width: 100%;
+    text-align: center;
+    display: flex; flex-direction: column; gap: 8px;
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4);
+  }
+  .karta h1 { margin: 0; font-family: var(--font-tytul); font-weight: 400; font-size: 40px; line-height: 1; color: var(--akcent); letter-spacing: 0.02em; text-wrap: balance; }
+  .karta p { margin: 0; font-size: 18px; line-height: 1.35; color: var(--tekst-cichy); }
+  .karta .duzy { font-family: var(--font-tytul); font-size: 56px; line-height: 1; color: var(--tekst); font-variant-numeric: tabular-nums; }
+  .sterowanie { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; text-align: left; margin: 6px auto 0; font-size: 16px; color: var(--tekst-cichy); }
+  .sterowanie b { color: var(--tekst); font-weight: 700; }
+  .karta button {
+    margin-top: 10px;
+    font-family: var(--font-tytul); font-size: 22px; letter-spacing: 0.04em;
+    color: #1b1406; background: var(--akcent);
+    border: 0; border-radius: 10px; padding: 12px 20px; min-height: 50px; cursor: pointer;
+    box-shadow: 0 4px 0 #a8741a;
+  }
+  .karta button:active { transform: translateY(2px); box-shadow: 0 2px 0 #a8741a; }
+  .karta button:focus-visible { outline: 3px solid var(--tekst); outline-offset: 3px; }
+</style>
+
+<div class="scena">
+  <canvas id="plotno" aria-label="Plansza gry: twój samolot na dole, wrogie samoloty nadlatują z góry"></canvas>
+
+  <div class="panel">
+    <div class="blok"><span class="etyk">Punkty</span><span class="wart" id="punkty">0</span></div>
+    <div class="blok prawo"><span class="etyk">Fala <span id="fala">1</span> · Rekord <span id="rekord">0</span></span><span class="zycia" id="zycia" aria-label="Życia">▲▲▲</span></div>
+  </div>
+
+  <div class="nakladka" id="ekran-start">
+    <div class="karta">
+      <h1>Eskadra Świt</h1>
+      <p>Bronisz wybrzeża. Zestrzel wrogie samoloty, zanim przelecą.</p>
+      <div class="sterowanie">
+        <b>Telefon</b><span>przesuwaj palcem, strzelanie jest automatyczne</span>
+        <b>Klawiatura</b><span>strzałki lub A / D, spacja strzela</span>
+        <b>Mysz</b><span>przesuwaj kursorem</span>
+      </div>
+      <p>Złota gwiazdka daje podwójny ogień.</p>
+      <button id="btn-start" type="button">Start</button>
+    </div>
+  </div>
+
+  <div class="nakladka" id="ekran-koniec" hidden>
+    <div class="karta" role="dialog" aria-labelledby="koniec-tytul">
+      <h1 id="koniec-tytul">Misja zakończona</h1>
+      <div class="duzy" id="koniec-punkty">0</div>
+      <p id="koniec-opis">punktów</p>
+      <button id="btn-znowu" type="button">Jeszcze raz</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const plotno = document.getElementById('plotno');
+  const ctx = plotno.getContext('2d');
+  const el = (id) => document.getElementById(id);
+  const ePunkty = el('punkty'), eFala = el('fala'), eRekord = el('rekord'), eZycia = el('zycia');
+  const ekranStart = el('ekran-start'), ekranKoniec = el('ekran-koniec');
+  const ruchOgr = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = 0, H = 0, dpr = 1, S = 1; // S = skala obiektów
+  let stan = 'start';
+  let punkty = 0, fala = 1, zycia = 3, zabite = 0;
+  let rekord = 0;
+  try { rekord = parseInt(localStorage.getItem('eskadra-swit-rekord') || '0', 10) || 0; } catch (e) {}
+  eRekord.textContent = rekord;
+
+  const gracz = { x: 0, y: 0, cel: null, cooldown: 0, podwojny: 0, niezniszczalny: 0 };
+  let pociski = [], wrogowie = [], wrogiePociski = [], wybuchy = [], bonusy = [], wyspy = [], chmury = [];
+  let doWroga = 0, przesuniecie = 0;
+  const klawisze = {};
+
+  function rozmiar() {
+    dpr = Math.min(devicePixelRatio || 1, 2.5);
+    const r = plotno.getBoundingClientRect();
+    W = r.width; H = r.height;
+    plotno.width = Math.round(W * dpr); plotno.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    S = Math.max(0.75, Math.min(1.25, W / 480));
+    if (stan !== 'gra') { gracz.x = W / 2; gracz.y = H - 90 * S; }
+    if (!wyspy.length) {
+      for (let i = 0; i < 4; i++) wyspy.push(nowaWyspa(Math.random() * H));
+      for (let i = 0; i < 4; i++) chmury.push(nowaChmura(Math.random() * H));
+    }
+  }
+  const nowaWyspa = (y) => ({ x: Math.random() * W, y, r: 30 + Math.random() * 60, ksztalt: Array.from({ length: 9 }, () => 0.75 + Math.random() * 0.4) });
+  const nowaChmura = (y) => ({ x: Math.random() * W, y, s: 0.7 + Math.random() * 0.9 });
+
+  function pokazZycia() { eZycia.textContent = '▲'.repeat(Math.max(0, zycia)); }
+
+  function start() {
+    stan = 'gra';
+    punkty = 0; fala = 1; zycia = 3; zabite = 0;
+    pociski = []; wrogowie = []; wrogiePociski = []; wybuchy = []; bonusy = [];
+    gracz.x = W / 2; gracz.y = H - 90 * S; gracz.cel = null; gracz.podwojny = 0; gracz.niezniszczalny = 1.5; gracz.cooldown = 0;
+    doWroga = 0.8;
+    ePunkty.textContent = '0'; eFala.textContent = '1'; pokazZycia();
+    ekranStart.hidden = true; ekranKoniec.hidden = true;
+  }
+
+  function koniec() {
+    stan = 'koniec';
+    const nowy = punkty > rekord;
+    if (nowy) { rekord = punkty; try { localStorage.setItem('eskadra-swit-rekord', String(rekord)); } catch (e) {} eRekord.textContent = rekord; }
+    el('koniec-punkty').textContent = punkty;
+    el('koniec-opis').textContent = 'punktów · fala ' + fala + (nowy && punkty > 0 ? ' · nowy rekord!' : '');
+    ekranKoniec.hidden = false;
+    el('btn-znowu').focus({ preventScroll: true });
+  }
+
+  el('btn-start').addEventListener('click', start);
+  el('btn-znowu').addEventListener('click', start);
+
+  // sterowanie
+  function celZ(e) { const r = plotno.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  let przeciaga = false, start_dotyk = null, start_gracz = null;
+  plotno.addEventListener('pointerdown', (e) => {
+    if (stan !== 'gra') return;
+    przeciaga = true; start_dotyk = celZ(e); start_gracz = { x: gracz.x, y: gracz.y };
+    plotno.setPointerCapture?.(e.pointerId);
+  });
+  plotno.addEventListener('pointermove', (e) => {
+    if (stan !== 'gra') return;
+    const p = celZ(e);
+    if (e.pointerType === 'mouse' && !przeciaga) { gracz.cel = { x: p.x, y: gracz.y }; return; }
+    if (!przeciaga) return;
+    // przesuwanie względne — palec nie zasłania samolotu
+    gracz.cel = { x: start_gracz.x + (p.x - start_dotyk.x) * 1.15, y: start_gracz.y + (p.y - start_dotyk.y) * 1.15 };
+  });
+  const puszczone = () => { przeciaga = false; };
+  plotno.addEventListener('pointerup', puszczone);
+  plotno.addEventListener('pointercancel', puszczone);
+  addEventListener('keydown', (e) => {
+    klawisze[e.key.toLowerCase()] = true;
+    if ([' ', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(e.key.toLowerCase())) e.preventDefault();
+    if (e.key === 'Enter' && stan !== 'gra' && !['BUTTON'].includes(document.activeElement?.tagName)) start();
+  });
+  addEventListener('keyup', (e) => { klawisze[e.key.toLowerCase()] = false; });
+
+  // wrogowie
+  function dodajWroga() {
+    const r = Math.random();
+    const trudnosc = Math.min(fala, 12);
+    const x = 30 * S + Math.random() * (W - 60 * S);
+    if (fala >= 3 && r < 0.12 + trudnosc * 0.01) {
+      wrogowie.push({ typ: 'bombowiec', x, y: -60 * S, vy: (45 + trudnosc * 4) * S, hp: 6 + Math.floor(fala / 2), maxHp: 6 + Math.floor(fala / 2), r: 34 * S, strzal: 1.2, t: 0, pkt: 250 });
+    } else if (fala >= 2 && r < 0.45) {
+      wrogowie.push({ typ: 'zygzak', x, x0: x, y: -30 * S, vy: (95 + trudnosc * 8) * S, hp: 2, maxHp: 2, r: 18 * S, t: Math.random() * 6, amp: (40 + Math.random() * 50) * S, pkt: 120 });
+    } else {
+      wrogowie.push({ typ: 'mysliwiec', x, y: -30 * S, vy: (120 + trudnosc * 10) * S, hp: 1, maxHp: 1, r: 17 * S, t: 0, pkt: 100 });
+    }
+  }
+
+  function wybuch(x, y, wielkosc) {
+    const n = ruchOgr ? 6 : 18;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, v = (40 + Math.random() * 160) * wielkosc;
+      wybuchy.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, max: 0.4 + Math.random() * 0.4, r: (3 + Math.random() * 5) * wielkosc });
+    }
+  }
+
+  function trafienieGracza() {
+    if (gracz.niezniszczalny > 0) return;
+    zycia--; pokazZycia();
+    wybuch(gracz.x, gracz.y, 1.4 * S);
+    gracz.podwojny = 0;
+    gracz.niezniszczalny = 2;
+    if (zycia <= 0) koniec();
+  }
+
+  const kolizja = (a, b, ra, rb) => { const dx = a.x - b.x, dy = a.y - b.y; return dx * dx + dy * dy < (ra + rb) * (ra + rb); };
+
+  function krok(dt) {
+    const tempo = stan === 'gra' ? 1 : 0.4;
+    przesuniecie += 60 * S * dt * tempo;
+    for (const w of wyspy) { w.y += 60 * S * dt * tempo; if (w.y - w.r > H) Object.assign(w, nowaWyspa(-w.r - Math.random() * 200)); }
+    for (const c of chmury) { c.y += 110 * S * dt * tempo; if (c.y - 80 * c.s > H) Object.assign(c, nowaChmura(-100 - Math.random() * 300)); }
+
+    for (const b of wybuchy) { b.t += dt; b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.92; b.vy *= 0.92; }
+    wybuchy = wybuchy.filter((b) => b.t < b.max);
+    if (stan !== 'gra') return;
+
+    // ruch gracza
+    const v = 380 * S;
+    let dx = 0, dy = 0;
+    if (klawisze['arrowleft'] || klawisze['a']) dx -= 1;
+    if (klawisze['arrowright'] || klawisze['d']) dx += 1;
+    if (klawisze['arrowup'] || klawisze['w']) dy -= 1;
+    if (klawisze['arrowdown'] || klawisze['s']) dy += 1;
+    if (dx || dy) { gracz.x += dx * v * dt; gracz.y += dy * v * dt; gracz.cel = null; }
+    else if (gracz.cel) {
+      gracz.x += (gracz.cel.x - gracz.x) * Math.min(1, dt * 14);
+      gracz.y += (gracz.cel.y - gracz.y) * Math.min(1, dt * 14);
+    }
+    gracz.x = Math.max(22 * S, Math.min(W - 22 * S, gracz.x));
+    gracz.y = Math.max(H * 0.45, Math.min(H - 40 * S, gracz.y));
+    gracz.niezniszczalny = Math.max(0, gracz.niezniszczalny - dt);
+    gracz.podwojny = Math.max(0, gracz.podwojny - dt);
+
+    // ogień (automatyczny na dotyku, spacja na klawiaturze — też automatyczny dla prostoty)
+    gracz.cooldown -= dt;
+    if (gracz.cooldown <= 0) {
+      gracz.cooldown = 0.16;
+      const vy = -620 * S;
+      if (gracz.podwojny > 0) {
+        pociski.push({ x: gracz.x - 10 * S, y: gracz.y - 18 * S, vy }, { x: gracz.x + 10 * S, y: gracz.y - 18 * S, vy });
+      } else pociski.push({ x: gracz.x, y: gracz.y - 22 * S, vy });
+    }
+    for (const p of pociski) p.y += p.vy * dt;
+    pociski = pociski.filter((p) => p.y > -20 && !p.zuzyty);
+
+    // wrogowie
+    doWroga -= dt;
+    if (doWroga <= 0) { dodajWroga(); doWroga = Math.max(0.28, 1.0 - fala * 0.06) * (0.6 + Math.random() * 0.8); }
+    for (const w of wrogowie) {
+      w.t += dt; w.y += w.vy * dt;
+      if (w.typ === 'zygzak') w.x = w.x0 + Math.sin(w.t * 2.6) * w.amp;
+      if (w.typ === 'bombowiec') {
+        w.strzal -= dt;
+        if (w.strzal <= 0 && w.y > 0 && w.y < H * 0.7) {
+          w.strzal = Math.max(0.7, 1.6 - fala * 0.06);
+          const kat = Math.atan2(gracz.y - w.y, gracz.x - w.x);
+          const vp = 190 * S;
+          wrogiePociski.push({ x: w.x, y: w.y + 20 * S, vx: Math.cos(kat) * vp, vy: Math.sin(kat) * vp });
+        }
+      }
+      if (w.typ === 'mysliwiec' && fala >= 4 && !w.oddal && w.y > H * 0.25 && Math.random() < 0.01) {
+        w.oddal = true;
+        wrogiePociski.push({ x: w.x, y: w.y + 12 * S, vx: 0, vy: 260 * S });
+      }
+      for (const p of pociski) {
+        if (!p.zuzyty && kolizja(p, w, 4 * S, w.r)) {
+          p.zuzyty = true; w.hp--; w.trafiony = 0.08;
+          if (w.hp <= 0) {
+            w.zniszczony = true; punkty += w.pkt; zabite++;
+            ePunkty.textContent = punkty;
+            wybuch(w.x, w.y, (w.typ === 'bombowiec' ? 1.8 : 1) * S);
+            if (w.typ === 'bombowiec' || Math.random() < 0.06) bonusy.push({ x: w.x, y: w.y, vy: 90 * S, t: 0 });
+            const nowaFala = 1 + Math.floor(zabite / 15);
+            if (nowaFala !== fala) { fala = nowaFala; eFala.textContent = fala; }
+          }
+        }
+      }
+      if (w.trafiony) w.trafiony = Math.max(0, w.trafiony - dt);
+      if (!w.zniszczony && kolizja(w, gracz, w.r * 0.8, 16 * S)) { w.zniszczony = true; wybuch(w.x, w.y, S); trafienieGracza(); }
+    }
+    // wróg, który przeleciał — kara punktowa, bez utraty życia
+    for (const w of wrogowie) if (!w.zniszczony && w.y - w.r > H) { w.zniszczony = true; punkty = Math.max(0, punkty - 25); ePunkty.textContent = punkty; }
+    wrogowie = wrogowie.filter((w) => !w.zniszczony);
+
+    for (const p of wrogiePociski) {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (kolizja(p, gracz, 4 * S, 13 * S)) { p.zuzyty = true; trafienieGracza(); }
+    }
+    wrogiePociski = wrogiePociski.filter((p) => !p.zuzyty && p.y < H + 20 && p.y > -20 && p.x > -20 && p.x < W + 20);
+
+    for (const b of bonusy) {
+      b.t += dt; b.y += b.vy * dt;
+      if (kolizja(b, gracz, 14 * S, 20 * S)) { b.wziety = true; gracz.podwojny = 10; punkty += 50; ePunkty.textContent = punkty; }
+    }
+    bonusy = bonusy.filter((b) => !b.wziety && b.y < H + 30);
+  }
+
+  // rysowanie
+  function samolot(x, y, s, kolorKad, kolorSkrz, wDol) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, wDol ? -s : s);
+    ctx.fillStyle = kolorSkrz;
+    ctx.beginPath(); ctx.moveTo(-26, 2); ctx.lineTo(26, 2); ctx.lineTo(22, 10); ctx.lineTo(-22, 10); ctx.closePath(); ctx.fill(); // skrzydła
+    ctx.beginPath(); ctx.moveTo(-10, 20); ctx.lineTo(10, 20); ctx.lineTo(8, 25); ctx.lineTo(-8, 25); ctx.closePath(); ctx.fill(); // usterzenie
+    ctx.fillStyle = kolorKad;
+    ctx.beginPath(); ctx.ellipse(0, 4, 5.5, 22, 0, 0, Math.PI * 2); ctx.fill(); // kadłub
+    ctx.fillStyle = 'rgba(180,225,255,0.85)';
+    ctx.beginPath(); ctx.ellipse(0, -4, 3, 5, 0, 0, Math.PI * 2); ctx.fill(); // kabina
+    ctx.restore();
+  }
+
+  function bombowiec(w) {
+    const s = S * 1.25;
+    ctx.save(); ctx.translate(w.x, w.y); ctx.scale(s, -s);
+    ctx.fillStyle = w.trafiony ? '#ffffff' : '#7b2f2a';
+    ctx.beginPath(); ctx.moveTo(-44, 0); ctx.lineTo(44, 0); ctx.lineTo(38, 12); ctx.lineTo(-38, 12); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = w.trafiony ? '#ffffff' : '#a43c34';
+    ctx.beginPath(); ctx.ellipse(0, 4, 9, 30, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3b1714';
+    for (const ex of [-24, 24]) { ctx.beginPath(); ctx.ellipse(ex, -2, 5, 9, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = w.trafiony ? '#ffffff' : '#7b2f2a';
+    ctx.beginPath(); ctx.moveTo(-16, 28); ctx.lineTo(16, 28); ctx.lineTo(12, 34); ctx.lineTo(-12, 34); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    // pasek wytrzymałości
+    const sz = 50 * S;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(w.x - sz / 2, w.y - 50 * S, sz, 5);
+    ctx.fillStyle = '#f2b134'; ctx.fillRect(w.x - sz / 2, w.y - 50 * S, sz * (w.hp / w.maxHp), 5);
+  }
+
+  function rysuj() {
+    // morze
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0e3a5c'); g.addColorStop(1, '#1d6a96');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // fale
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 2;
+    const krokF = 46 * S;
+    for (let y = (przesuniecie % krokF) - krokF; y < H; y += krokF) {
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 24) ctx.lineTo(x, y + Math.sin((x + y) * 0.03) * 4);
+      ctx.stroke();
+    }
+    // wyspy
+    for (const w of wyspy) {
+      ctx.fillStyle = 'rgba(230,214,160,0.9)';
+      ctx.beginPath();
+      w.ksztalt.forEach((k, i) => { const a = (i / w.ksztalt.length) * Math.PI * 2; const px = w.x + Math.cos(a) * w.r * k * 1.15, py = w.y + Math.sin(a) * w.r * k * 0.8; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#3f7d4a';
+      ctx.beginPath();
+      w.ksztalt.forEach((k, i) => { const a = (i / w.ksztalt.length) * Math.PI * 2; const px = w.x + Math.cos(a) * w.r * k * 0.85, py = w.y + Math.sin(a) * w.r * k * 0.58; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+      ctx.closePath(); ctx.fill();
+    }
+
+    // bonusy
+    for (const b of bonusy) {
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(ruchOgr ? 0 : b.t * 2);
+      ctx.fillStyle = '#f2b134';
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) { const r = (i % 2 ? 6 : 14) * S, a = (i / 10) * Math.PI * 2 - Math.PI / 2; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    // pociski gracza
+    ctx.fillStyle = '#ffe9a8';
+    for (const p of pociski) { ctx.fillRect(p.x - 1.5 * S, p.y - 7 * S, 3 * S, 12 * S); }
+    // pociski wroga
+    ctx.fillStyle = '#ff7a6b';
+    for (const p of wrogiePociski) { ctx.beginPath(); ctx.arc(p.x, p.y, 4.5 * S, 0, Math.PI * 2); ctx.fill(); }
+
+    // wrogowie (cień + samolot)
+    for (const w of wrogowie) {
+      if (w.typ === 'bombowiec') { bombowiec(w); continue; }
+      ctx.globalAlpha = 0.25; samolot(w.x + 14 * S, w.y + 22 * S, S * 0.8, '#000', '#000', true); ctx.globalAlpha = 1;
+      const kad = w.trafiony ? '#ffffff' : (w.typ === 'zygzak' ? '#7a5bb5' : '#c8463c');
+      const skr = w.trafiony ? '#ffffff' : (w.typ === 'zygzak' ? '#5a3f8f' : '#9c3129');
+      samolot(w.x, w.y, S * 0.8, kad, skr, true);
+    }
+
+    // gracz
+    if (stan !== 'koniec') {
+      const migaj = gracz.niezniszczalny > 0 && Math.floor(performance.now() / 90) % 2 === 0;
+      if (!migaj) {
+        ctx.globalAlpha = 0.25; samolot(gracz.x + 16 * S, gracz.y + 26 * S, S, '#000', '#000', false); ctx.globalAlpha = 1;
+        samolot(gracz.x, gracz.y, S, '#e9e4d4', '#9aa7a0', false);
+        // śmigło
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.beginPath(); ctx.ellipse(gracz.x, gracz.y - 19 * S, 11 * S, 2 * S, 0, 0, Math.PI * 2); ctx.fill();
+        if (gracz.podwojny > 0) {
+          ctx.strokeStyle = 'rgba(242,177,52,0.6)'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(gracz.x, gracz.y, 30 * S, 0, Math.PI * 2 * (gracz.podwojny / 10)); ctx.stroke();
+        }
+      }
+    }
+
+    // wybuchy
+    for (const b of wybuchy) {
+      const k = 1 - b.t / b.max;
+      ctx.fillStyle = `rgba(255,${Math.round(150 + 80 * k)},${Math.round(60 * k)},${k.toFixed(3)})`;
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r * (1.2 - k * 0.4), 0, Math.PI * 2); ctx.fill();
+    }
+
+    // chmury nad wszystkim
+    for (const c of chmury) {
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 34 * c.s, 0, Math.PI * 2);
+      ctx.arc(c.x + 38 * c.s, c.y + 8 * c.s, 40 * c.s, 0, Math.PI * 2);
+      ctx.arc(c.x - 36 * c.s, c.y + 12 * c.s, 28 * c.s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  let ostatni = performance.now();
+  function petla(t) {
+    const dt = Math.min(0.033, (t - ostatni) / 1000); ostatni = t;
+    krok(dt); rysuj();
+    requestAnimationFrame(petla);
+  }
+  addEventListener('resize', rozmiar);
+  rozmiar(); pokazZycia();
+  requestAnimationFrame(petla);
+})();
+</script>
+
+</body></html>
