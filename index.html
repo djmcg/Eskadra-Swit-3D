@@ -76,6 +76,9 @@
   .lista-bossow h3 { margin: 0; font-family: var(--font-tytul); font-weight: 400; font-size: 17px; color: var(--akcent); letter-spacing: .04em; }
   .lista-bossow p { font-size: 14px; margin: 2px 0 0; line-height: 1.3; }
   .lista-bossow b { color: var(--tekst); }
+  .testowe { border-top: 1px dashed rgba(255,255,255,.2); padding-top: 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 6px; }
+  .testowe > span { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--tekst-cichy); }
+  .karta .testowe button.drugi { font-size: 14px; padding: 4px 10px; min-height: 36px; margin-top: 0; }
   .alarm { position: absolute; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 110px 26px rgba(255, 40, 30, .7); }
   .alarm.pokaz { animation: alarm .55s ease both; }
   @keyframes alarm { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
@@ -197,6 +200,7 @@
         <b>Esc / P</b><span>pauza i ustawienia</span>
         <b>M / F</b><span>muzyka wł./wył. · pełny ekran</span>
       </div>
+      <div class="testowe"><span>Skróty testowe</span><div class="rzad" id="test-rundy"></div><div class="rzad" id="test-bossy"></div></div>
       <p id="status-ladowania" hidden style="color:#ffb4a8;font-size:15px"></p>
       <div class="rzad">
         <button class="glowny" id="btn-start" type="button" disabled>Ładowanie…</button>
@@ -897,17 +901,31 @@ function wyczyscSwiat() {
   gracz.hp = HP_MAX; pokazHp();
   gracz.x = W / 2; gracz.y = H - 100 * S; gracz.cel = null; gracz.bron = 1; gracz.szybki = 0; gracz.tarcza = 0; gracz.cooldown = 0; gracz.vx = 0; gracz.bank = 0; gracz.lod = 0;
 }
-function start() {
+let ostatniStart = [1, 1], testowy = false; // skróty testowe: start od wybranej rundy / od walki z bossem (poziom 10); wynik nie trafia do rekordów
+function start(r = 1, p = 1) {
   if (zaladowane < NAZWY.length) return;
+  ostatniStart = [r, p]; testowy = r !== 1 || p !== 1;
   audioInit(); profil = PROFILE[ust.samolot];
   stan = 'gra'; document.body.classList.add('gra');
-  punkty = 0; runda = 1; poziom = 1; zycia = TR.zycia; zabite = 0; bonusCd = 0; wyczyscSwiat();
-  zmienMotyw(0, true);
+  punkty = 0; runda = r; poziom = p; zycia = TR.zycia; zabite = 0; bonusCd = 0; wyczyscSwiat();
+  if (testowy) gracz.bron = Math.min(3, r); // w trybie testowym broń od razu odpowiada rundzie
+  zmienMotyw(r - 1, true);
   gracz.niezniszczalny = 1.5;
-  ePunkty.textContent = '0'; eFala.textContent = '1'; pokazZycia();
+  ePunkty.textContent = '0'; eFala.textContent = r; pokazZycia();
   pokazEkran(null); el('narzedzia').hidden = false; el('hud-bronie').hidden = false;
   rozpocznijPoziom(true);
-  baner('RUNDA 1', NAZWY_RUND[0]); dzw.runda();
+  baner(p === POZ_N ? 'BOSS' : 'RUNDA ' + r, p === POZ_N ? NAZWY_BOSSOW[r - 1] : NAZWY_RUND[r - 1]); dzw.runda();
+}
+function zbudujTesty() {
+  for (const [id, boss] of [['test-rundy', false], ['test-bossy', true]]) {
+    const w = el(id); w.innerHTML = '';
+    for (let r = 1; r <= RUNDY_N; r++) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'drugi';
+      b.textContent = boss ? 'Boss ' + r : 'Runda ' + r; b.title = boss ? 'Walka z bossem: ' + NAZWY_BOSSOW[r - 1] : 'Runda ' + r + ' od poziomu 1: ' + NAZWY_RUND[r - 1];
+      b.addEventListener('click', () => { audioInit(); start(r, boss ? POZ_N : 1); });
+      w.appendChild(b);
+    }
+  }
 }
 function doMenu() {
   stan = 'menu'; document.body.classList.remove('gra'); wyczyscSwiat(); zmienMotyw(0, true);
@@ -925,13 +943,13 @@ function wznow() {
 function koniec(wygrana) {
   stan = 'koniec'; document.body.classList.remove('gra'); el('narzedzia').hidden = true; el('hud-bronie').hidden = true; el('boss').hidden = true; el('boss-opis').hidden = true; dzw.koniec();
   const premiaZ = wygrana ? Math.round(zycia * 500 * TR.punkty) : 0; punkty += premiaZ;
-  const nowy = punkty > rekord;
+  const nowy = !testowy && punkty > rekord;
   if (nowy) { rekord = punkty; try { localStorage.setItem('eskadra-swit-3d-rekord-' + ust.trudnosc, String(rekord)); } catch (e) {} eRekord.textContent = rekord; }
   el('koniec-tytul').textContent = wygrana ? 'Gratulacje!' : 'Misja zakończona';
   el('koniec-punkty').textContent = punkty;
   el('koniec-opis').textContent = wygrana
-    ? 'Pokonałeś wszystkich 4 bossów i obroniłeś wybrzeże! Poziom: ' + TR.nazwa + ' · premia za życia +' + premiaZ + (nowy ? ' · nowy rekord!' : '')
-    : 'punktów · poziom ' + TR.nazwa + ' · runda ' + runda + ' · poziom ' + Math.max(1, poziom) + (nowy && punkty > 0 ? ' · nowy rekord!' : '');
+    ? 'Pokonałeś wszystkich 4 bossów i obroniłeś wybrzeże! Poziom: ' + TR.nazwa + ' · premia za życia +' + premiaZ + (nowy ? ' · nowy rekord!' : '') + (testowy ? ' · (tryb testowy)' : '')
+    : 'punktów · poziom ' + TR.nazwa + ' · runda ' + runda + ' · poziom ' + Math.max(1, poziom) + (nowy && punkty > 0 ? ' · nowy rekord!' : '') + (testowy ? ' · (tryb testowy, bez rekordu)' : '');
   pokazEkran('koniec'); el('btn-znowu').focus({ preventScroll: true });
 }
 function pelnyEkran() {
@@ -940,7 +958,7 @@ function pelnyEkran() {
 }
 
 el('btn-start').addEventListener('click', () => { if (bladLadowania) wczytajModele(); else start(); });
-el('btn-znowu').addEventListener('click', start);
+el('btn-znowu').addEventListener('click', () => start(...ostatniStart));
 el('btn-bossy').addEventListener('click', () => { audioInit(); dzw.klik(); pokazEkran('bossy'); el('btn-bossy-wroc').focus({ preventScroll: true }); });
 el('btn-bossy-wroc').addEventListener('click', () => { pokazEkran('menu'); el('btn-start').focus({ preventScroll: true }); });
 el('btn-wznow').addEventListener('click', wznow);
@@ -1003,7 +1021,7 @@ addEventListener('keydown', (e) => {
     if (k === 'arrowdown' || k === 's') { e.preventDefault(); zmienTrudnosc(1); dzw.klik(); }
   }
   if (k === 'enter' && document.activeElement?.tagName !== 'BUTTON') {
-    if (stan === 'menu' || stan === 'koniec') start(); else if (stan === 'pauza') wznow();
+    if (stan === 'menu') start(); else if (stan === 'koniec') start(...ostatniStart); else if (stan === 'pauza') wznow();
   }
 });
 addEventListener('keyup', (e) => { klawisze[e.key.toLowerCase()] = false; });
@@ -1789,7 +1807,7 @@ function petla(t) {
   renderer.render(scene, camera);
   requestAnimationFrame(petla);
 }
-zbudujWybor(); zbudujTrudnosc(); zbudujBossy(); muzEtykiety(); rozmiar(); pokazZycia(); pokazHp();
+zbudujWybor(); zbudujTrudnosc(); zbudujBossy(); zbudujTesty(); muzEtykiety(); rozmiar(); pokazZycia(); pokazHp();
 requestAnimationFrame(petla);
 window.__eskadraOK = true;
 window.__eskadra = {
